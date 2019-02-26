@@ -277,16 +277,20 @@ if __name__ == '__main__':
 
     data_features = np.array(all_feature_data)
     data_labels = np.array(all_labels_data)
-    indices = np.arange(data_features.shape[0])
-    # np.random.shuffle(indices)
-    ratio = int(0.9 * data_features.shape[0])
-    train_x, test_x = data_features[indices[:ratio]], data_features[indices[ratio:]]
-    train_y, test_y = data_labels[indices[:ratio]], data_labels[indices[ratio:]]
 
     dataset = h5py.File(SGF_DIR + '.h5', 'w')
-    dataset.create_dataset('train_x', data=train_x)
-    dataset.create_dataset('train_y', data=train_y)
-    dataset.create_dataset('test_x', data=test_x)
-    dataset.create_dataset('test_y', data=test_y)
+    dataset.create_dataset('problem', data=data_features)
+    dataset.create_dataset('answers', data=data_labels)
+
+    # indices = np.arange(data_features.shape[0])
+    # np.random.shuffle(indices)
+    # ratio = int(0.9 * data_features.shape[0])
+    # train_x, test_x = data_features[indices[:ratio]], data_features[indices[ratio:]]
+    # train_y, test_y = data_labels[indices[:ratio]], data_labels[indices[ratio:]]
+
+    # dataset.create_dataset('train_x', data=train_x)
+    # dataset.create_dataset('train_y', data=train_y)
+    # dataset.create_dataset('test_x', data=test_x)
+    # dataset.create_dataset('test_y', data=test_y)
 
     dataset.close()
