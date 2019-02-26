@@ -4,8 +4,8 @@ from typing import List
 import h5py
 import numpy as np
 
-from sgflib import SGFParser, Node, GameTree
 from board import Board
+from sgflib import SGFParser, Node, GameTree
 
 EMPTY = 0
 BLACK = 1
@@ -60,6 +60,7 @@ def get_trees(game_tree: GameTree):
             trees.append(common_data + nt)
 
     return trees
+
 
 def get_label_value(tree: GameTree):
     prop_comment = tree[-1].get('C')
@@ -159,7 +160,6 @@ def parse_correct_tree(board, tree):
             cur_ans[x, y] = 1
             boards.append(np.array(brd.board, copy=True))
             answers.append(np.array(cur_ans, copy=True))
-            # print_problem_and_answer(brd.board, cur_ans)
             brd.move(x, y)
 
         elif move.get('W'):
@@ -181,7 +181,6 @@ def parse_wrong_tree(board, tree):
             cur_ans[x, y] = 1
             boards.append(np.array(brd.board, copy=True))
             answers.append(np.array(cur_ans, copy=True))
-            # print_problem_and_answer(brd.board, cur_ans)
             brd.move(x, y)
         elif move.get('B'):
             x, y = get_pos(move.get('B').value)
@@ -225,7 +224,8 @@ def parse_trees(board, trees):
     answers = []
     for i in range(unique_boards.shape[0]):
         boards.append(unique_boards[i])
-        answer = np.sum(all_answers[indices == i].reshape(np.count_nonzero(indices == i), 19, 19), axis=0)
+        answer = np.array(np.sum(all_answers[indices == i].reshape(np.count_nonzero(indices == i), 19, 19), axis=0) > 0,
+                          np.int0)
         answers.append(answer)
 
     return np.array(boards), np.array(answers)
@@ -278,7 +278,7 @@ if __name__ == '__main__':
     data_features = np.array(all_feature_data)
     data_labels = np.array(all_labels_data)
     indices = np.arange(data_features.shape[0])
-    np.random.shuffle(indices)
+    # np.random.shuffle(indices)
     ratio = int(0.9 * data_features.shape[0])
     train_x, test_x = data_features[indices[:ratio]], data_features[indices[ratio:]]
     train_y, test_y = data_labels[indices[:ratio]], data_labels[indices[ratio:]]
