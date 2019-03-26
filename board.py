@@ -5,9 +5,15 @@ class Board:
     EMPTY = -1
     BLACK = 0
     WHITE = 1
+    BLACK_LIBERTIES = 2
+    WHITE_LIBERTIES = 3
 
-    def __init__(self, board: np.ndarray, turn=BLACK):
-        self.board = np.array(board, copy=True)
+    def __init__(self, stones: np.ndarray, turn=BLACK):
+        self.board = np.zeros((4,) + stones.shape[1:], dtype=np.uint8)
+        self.board[:2] = np.array(stones, copy=True)
+        self._vec_count_liberties = np.vectorize(self.count_liberties, excluded='self', otypes=[np.uint8])
+        self._update_liberties()
+
         self._turn = turn
         self._history = []
         self._score = {
@@ -68,6 +74,7 @@ class Board:
 
         self._check_for_ko()
         self._flip_turn()
+        self._update_liberties()
 
     def _check_for_suicide(self, x, y):
         """ Check move for suicide """
@@ -220,45 +227,21 @@ class Board:
         """ Count group liberties """
         return len(self.get_liberties(x, y))
 
+    def _update_liberties(self):
+        black_x, black_y = self.board[self.BLACK].nonzero()
+        white_x, white_y = self.board[self.WHITE].nonzero()
+
+        self.board[self.BLACK_LIBERTIES, black_x, black_y] = self._vec_count_liberties(black_x, black_y)
+        self.board[self.WHITE_LIBERTIES, white_x, white_y] = self._vec_count_liberties(white_x, white_y)
+
 
 if __name__ == '__main__':
     from sgflib import SGFParser
     from parser import get_board_data
 
-    with open('data/prob0009.sgf', 'r') as f:
+    with open('data/test/prob0001.sgf', 'r') as f:
         sgf = SGFParser(f.read()).parse()
 
     b, _ = get_board_data(sgf.data[0].data[0])
     brd = Board(b)
-    print(brd)
-    print()
-    brd.move(0, 1)
-    print(brd)
-    print()
-    brd.move(0, 2)
-    print(brd)
-    print()
-    brd.move(0, 3)
-    print(brd)
-    print()
-    brd.move(0, 0)
-    print(brd)
-    print()
-    brd.move(1, 0)
-    print(brd)
-    print()
-    brd.move(2, 0)
-    print(brd)
-    print()
-    brd.move(3, 0)
-    print(brd)
-    print()
-    brd.move(4, 0)
-    print(brd)
-    print()
-    brd.move(9, 9)
-    print(brd)
-    print()
-    brd.move(0, 4)
-    print(brd)
-    print()
+    print(brd.board)

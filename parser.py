@@ -10,7 +10,7 @@ from sgflib import SGFParser, Node, GameTree
 EMPTY = 0
 BLACK = 1
 WHITE = 2
-SGF_DIR = 'data/cho_chikun_elementary'
+SGF_DIR = 'data/cho_chikun_intermediate'
 
 
 def get_pos(s):
@@ -208,8 +208,8 @@ def parse_trees(board, trees):
 
             all_boards.extend(boards)
             all_answers.extend(answers)
-        except:
-            print("Exception")
+        except Exception as err:
+            print("Exception", err)
             print(Board(board))
 
     if not all_boards:
@@ -228,29 +228,8 @@ def parse_trees(board, trees):
                           np.int0)
         answers.append(answer)
 
+    print(f'{len(boards):3d} positions')
     return np.array(boards), np.array(answers)
-
-
-def print_problem_and_answer(problem_data, answer_data):
-    black = problem_data[0]
-    white = problem_data[1]
-
-    board = ''
-
-    for x in range(19):
-        for y in range(19):
-            if black[x, y] == 1:
-                board += '○ '
-            elif white[x, y] == 1:
-                board += '● '
-            elif answer_data[x, y] == 1:
-                board += 'x '
-            else:
-                board += '. '
-        board += '\n'
-
-    print("PROBLEM: ")
-    print(board)
 
 
 if __name__ == '__main__':
@@ -259,7 +238,6 @@ if __name__ == '__main__':
     all_feature_data = []
     all_labels_data = []
     for sgf_path in sorted(all_sgf_files):
-
         if os.path.splitext(sgf_path)[1] != '.sgf':
             continue
 
@@ -267,6 +245,7 @@ if __name__ == '__main__':
         board_data, sz = get_board_data(sgf.data[0])
         trees = get_trees(sgf)
 
+        print(f'Parsing {sgf_path}...', end=' ')
         boards, answers = parse_trees(np.array(board_data, copy=True), trees)
 
         for b in boards:
@@ -281,16 +260,5 @@ if __name__ == '__main__':
     dataset = h5py.File(SGF_DIR + '.h5', 'w')
     dataset.create_dataset('problem', data=data_features)
     dataset.create_dataset('answers', data=data_labels)
-
-    # indices = np.arange(data_features.shape[0])
-    # np.random.shuffle(indices)
-    # ratio = int(0.9 * data_features.shape[0])
-    # train_x, test_x = data_features[indices[:ratio]], data_features[indices[ratio:]]
-    # train_y, test_y = data_labels[indices[:ratio]], data_labels[indices[ratio:]]
-
-    # dataset.create_dataset('train_x', data=train_x)
-    # dataset.create_dataset('train_y', data=train_y)
-    # dataset.create_dataset('test_x', data=test_x)
-    # dataset.create_dataset('test_y', data=test_y)
 
     dataset.close()
