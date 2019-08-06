@@ -114,6 +114,28 @@ def print_board(data: List[List]):
     print(res)
 
 
+
+def add_color_features(board_data):
+    black_plane = board_data[0]
+    white_plane = board_data[1]
+    black_liberties = board_data[2]
+    white_liberties = board_data[3]
+
+    black_to_play = np.array([
+        black_plane, white_plane,
+        black_liberties, white_liberties,
+        np.ones([19, 19]), np.zeros([19, 19])
+    ])
+
+    white_to_play = np.array([
+        white_plane, black_plane,
+        white_liberties, black_liberties,
+        np.zeros([19, 19]), np.ones([19, 19])
+    ])
+
+    return black_to_play, white_to_play
+
+
 def generate_labels(answer_data):
     generated = []
     for data in answer_data:
@@ -122,10 +144,18 @@ def generate_labels(answer_data):
             np.flip(data, axis=(0,)),
             np.flip(data, axis=(1,)),
             np.flip(data, axis=(0, 1)),
-            np.flip(data, axis=(0, 1)),
+            np.transpose(data),
             np.transpose(np.flip(data, axis=(0,))),
             np.transpose(np.flip(data, axis=(1,))),
-            np.transpose(np.flip(data, axis=(0, 1))),
+            np.transpose(np.flip(data, axis=(0, 1)))])
+        generated.extend([
+            np.array(data),
+            np.flip(data, axis=(0,)),
+            np.flip(data, axis=(1,)),
+            np.flip(data, axis=(0, 1)),
+            np.transpose(data),
+            np.transpose(np.flip(data, axis=(0,))),
+            np.transpose(np.flip(data, axis=(1,))),
             np.transpose(np.flip(data, axis=(0, 1)))])
 
     return generated
@@ -134,16 +164,25 @@ def generate_labels(answer_data):
 def generate_boards(board_data):
     generated = []
     for data in board_data:
+        as_black, as_white = add_color_features(data)
         generated.extend([
-            np.array(data),
-            np.flip(data, axis=(1,)),
-            np.flip(data, axis=(2,)),
-            np.flip(data, axis=(1, 2)),
-            np.flip(data, axis=(1, 2)),
-            np.transpose(np.flip(data, axis=(1,)), axes=(0, 2, 1)),
-            np.transpose(np.flip(data, axis=(2,)), axes=(0, 2, 1)),
-            np.transpose(np.flip(data, axis=(1, 2)), axes=(0, 2, 1)),
-            np.transpose(np.flip(data, axis=(1, 2)), axes=(0, 2, 1))])
+            np.array(as_black),
+            np.flip(as_black, axis=(1,)),
+            np.flip(as_black, axis=(2,)),
+            np.flip(as_black, axis=(1, 2)),
+            np.transpose(as_black, axes=(0, 2, 1)),
+            np.transpose(np.flip(as_black, axis=(1,)), axes=(0, 2, 1)),
+            np.transpose(np.flip(as_black, axis=(2,)), axes=(0, 2, 1)),
+            np.transpose(np.flip(as_black, axis=(1, 2)), axes=(0, 2, 1))])
+        generated.extend([
+            np.array(as_white),
+            np.flip(as_white, axis=(1,)),
+            np.flip(as_white, axis=(2,)),
+            np.flip(as_white, axis=(1, 2)),
+            np.transpose(as_white, axes=(0, 2, 1)),
+            np.transpose(np.flip(as_white, axis=(1,)), axes=(0, 2, 1)),
+            np.transpose(np.flip(as_white, axis=(2,)), axes=(0, 2, 1)),
+            np.transpose(np.flip(as_white, axis=(1, 2)), axes=(0, 2, 1))])
 
     return generated
 
@@ -224,12 +263,14 @@ def parse_trees(board, trees):
     answers = []
     for i in range(unique_boards.shape[0]):
         boards.append(unique_boards[i])
-        answer = np.array(np.sum(all_answers[indices == i].reshape(np.count_nonzero(indices == i), 19, 19), axis=0) > 0,
-                          np.int0)
+        answer = np.array(
+            np.sum(all_answers[indices == i].reshape(np.count_nonzero(indices == i), 19, 19),
+                   axis=0) > 0,
+            np.int0)
         answers.append(answer)
 
     print(f'{len(boards):3d} positions')
-    return np.array(boards), np.array(answers)
+    return [np.array(boards), np.array(answers)]
 
 
 if __name__ == '__main__':
@@ -254,11 +295,11 @@ if __name__ == '__main__':
         for l in answers:
             all_labels_data.append(l)
 
-    data_features = np.array(all_feature_data)
-    data_labels = np.array(all_labels_data)
+    data_features = np.array(generate_boards(all_feature_data))
+    data_labels = np.array(generate_labels(all_labels_data))
 
     dataset = h5py.File(SGF_DIR + '.h5', 'w')
     dataset.create_dataset('problem', data=data_features)
     dataset.create_dataset('answers', data=data_labels)
-
+    print(dataset['problem'].shape)
     dataset.close()
