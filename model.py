@@ -11,21 +11,36 @@ def create_model():
     l2const = 1e-4
 
     layer = input_
-    layer = Conv2D(64, (1, 1), kernel_regularizer=l2(l2const))(layer)
+    layer = Conv2D(19, (1, 1), kernel_regularizer=l2(l2const))(layer)
     layer = BatchNormalization()(layer)
     layer = Activation('relu')(layer)
 
-    layer = Conv2D(64, (3, 3), padding='same', kernel_regularizer=l2(l2const))(layer)
+    layer = Conv2D(19, (3, 3), padding='same', kernel_regularizer=l2(l2const))(layer)
+    layer = BatchNormalization()(layer)
+    layer = Activation('relu')(layer)
+
+    layer = Conv2D(19, (5, 5), padding='same', kernel_regularizer=l2(l2const))(layer)
     layer = BatchNormalization()(layer)
     layer = Activation('relu')(layer)
 
     for _ in range(8):
         res = layer
-        layer = Conv2D(64, (3, 3), padding='same', kernel_regularizer=l2(l2const))(layer)
+        layer = Conv2D(19, (3, 3), padding='same', kernel_regularizer=l2(l2const))(layer)
         layer = BatchNormalization()(layer)
         layer = Activation('relu')(layer)
 
-        layer = Conv2D(64, (3, 3), padding='same', kernel_regularizer=l2(l2const))(layer)
+        layer = Conv2D(19, (3, 3), padding='same', kernel_regularizer=l2(l2const))(layer)
+        layer = BatchNormalization()(layer)
+
+        layer = Add()([layer, res])
+        layer = Activation('relu')(layer)
+
+        res = layer
+        layer = Conv2D(19, (5, 5), padding='same', kernel_regularizer=l2(l2const))(layer)
+        layer = BatchNormalization()(layer)
+        layer = Activation('relu')(layer)
+
+        layer = Conv2D(19, (5, 5), padding='same', kernel_regularizer=l2(l2const))(layer)
         layer = BatchNormalization()(layer)
 
         layer = Add()([layer, res])
@@ -51,7 +66,7 @@ def create_model():
 
 if __name__ == '__main__':
     import os
-    from utils import elementary_data
+    from utils import all_data
     import matplotlib.pyplot as plt
 
     model = create_model()
@@ -60,10 +75,10 @@ if __name__ == '__main__':
     if os.path.exists('weights.h5'):
         model.load_weights('weights.h5')
 
-    length = elementary_data['problem'].shape[0]
-    x, y = elementary_data['problem'][:], elementary_data['answers'][:].reshape(length, -1)
+    length = all_data['problem'].shape[0]
+    x, y = all_data['problem'][:], all_data['answers'][:].reshape(length, -1)
 
-    history = model.fit(x, y, validation_split=0.2, epochs=5, verbose=1)
+    history = model.fit(x, y, validation_split=0.25, batch_size=256, epochs=20)
     model.save_weights('weights.h5')
 
     # Plot training & validation accuracy values

@@ -10,7 +10,7 @@ from sgflib import SGFParser, Node, GameTree
 EMPTY = 0
 BLACK = 1
 WHITE = 2
-SGF_DIR = 'data/cho_chikun_intermediate'
+SGF_DIRS = ['data/cho_chikun_elementary', 'data/cho_chikun_intermediate']
 
 
 def get_pos(s):
@@ -80,8 +80,8 @@ def get_labels(tree_list: List, sz=19):
     return board
 
 
-def parse_sgf_file(sgf_path: str):
-    with open(os.path.join(SGF_DIR, sgf_path)) as file:
+def parse_sgf_file(filepath: str):
+    with open(filepath) as file:
         sgf_data = file.read()
 
     return SGFParser(sgf_data).parse()
@@ -274,7 +274,10 @@ def parse_trees(board, trees):
 
 
 if __name__ == '__main__':
-    all_sgf_files = os.listdir(SGF_DIR)
+    all_sgf_files = []
+    for d in SGF_DIRS:
+        for f in os.listdir(d):
+            all_sgf_files.append(os.path.join(d, f))
 
     all_feature_data = []
     all_labels_data = []
@@ -298,7 +301,7 @@ if __name__ == '__main__':
     data_features = np.array(generate_boards(all_feature_data))
     data_labels = np.array(generate_labels(all_labels_data))
 
-    dataset = h5py.File(SGF_DIR + '.h5', 'w')
+    dataset = h5py.File('problems_all' + '.h5', 'w')
     dataset.create_dataset('problem', data=data_features)
     dataset.create_dataset('answers', data=data_labels)
     print(dataset['problem'].shape)

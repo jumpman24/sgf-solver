@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+ALL_PATH = 'problems_all.h5'
 ELEMENTARY_PATH = 'data/cho_chikun_elementary.h5'
 INTERMEDIATE_PATH = 'data/cho_chikun_intermediate.h5'
 
@@ -67,5 +68,6 @@ def train_test_split(data):
     return train_x, train_y, test_x, test_y
 
 
-elementary_data = h5py.File(ELEMENTARY_PATH, 'r')
+all_data = h5py.File(ALL_PATH, 'r')
+# elementary_data = h5py.File(ELEMENTARY_PATH, 'r')
 # intermediate_data = h5py.File(INTERMEDIATE_PATH, 'r')
