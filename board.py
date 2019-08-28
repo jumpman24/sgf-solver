@@ -13,7 +13,7 @@ class Board:
     WHITE_LIBERTIES = 3
 
     def __init__(self, stones: np.ndarray, turn=BLACK, history=None):
-        self._size = stones.shape[1]
+        self.board_size = stones.shape[1]
         self.board = np.array(stones, copy=True)
 
         self._turn = turn
@@ -41,6 +41,9 @@ class Board:
             board.append(line)
 
         return '\n'.join(board)
+
+    def copy(self):
+        return Board(self.board, self._turn, self._history)
 
     @property
     def turn(self):
@@ -129,7 +132,7 @@ class Board:
 
     def _get_loc(self, x, y):
         """ Get location state """
-        if x < 0 or y < 0 or x >= self._size or y >= self._size:
+        if x < 0 or y < 0 or x >= self.board_size or y >= self.board_size:
             return None
 
         elif self.board[0, x, y] == 1:
@@ -226,9 +229,9 @@ class Board:
         return len(self.get_liberties(x, y))
 
     def legal_moves(self):
-        allowed = np.zeros((self._size, self._size))
-        for x in range(self._size):
-            for y in range(self._size):
+        allowed = np.zeros((self.board_size, self.board_size))
+        for x in range(self.board_size):
+            for y in range(self.board_size):
                 try:
                     self.move(x, y)
                     allowed[x, y] = 1
@@ -237,24 +240,12 @@ class Board:
                     pass
         return allowed.astype(int)
 
-
-class TsumegoBoard(Board):
-    BLACK_TO_PLAY = 'black'
-    WHITE_TO_PLAY = 'white'
-    TO_LIVE = 'live'
-    TO_KILL = 'kill'
-
-    def __init__(self, stones: np.ndarray, to_play=BLACK_TO_PLAY, target=TO_LIVE):
-        super().__init__(stones, 0 if to_play == self.BLACK_TO_PLAY else 1)
-        self.to_play = to_play
-        self.target = target
-
     def get_groups(self):
         black_groups = []
         white_groups = []
 
-        for x in range(self._size):
-            for y in range(self._size):
+        for x in range(self.board_size):
+            for y in range(self.board_size):
                 loc = self._get_loc(x, y)
 
                 if loc == self.BLACK:
@@ -297,8 +288,8 @@ class TsumegoBoard(Board):
 
         black_ignore = set()
         white_ignore = set()
-        for x in range(self._size):
-            for y in range(self._size):
+        for x in range(self.board_size):
+            for y in range(self.board_size):
                 loc = self._get_loc(x, y)
 
                 if (x, y) not in black_ignore and loc in [self.EMPTY, self.WHITE]:
@@ -383,9 +374,26 @@ class TsumegoBoard(Board):
 
         return black_groups, white_groups
 
+
+class TsumegoBoard:
+    BLACK_TO_PLAY = 'black'
+    WHITE_TO_PLAY = 'white'
+    TO_LIVE = 'live'
+    TO_KILL = 'kill'
+
+    def __init__(self, board: Board, to_play=BLACK_TO_PLAY, target=TO_LIVE):
+        self.board = board
+        self.to_play = to_play
+        self.target = target
+
+    def move_and_copy(self, x, y):
+        new_board = self.board.copy()
+        new_board.move(x, y)
+        return TsumegoBoard(new_board, self.to_play, self.target)
+
     def is_solved(self):
-        black_groups, white_groups = self.get_groups()
-        black_alive, white_alive = self.benson_groups()
+        black_groups, white_groups = self.board.get_groups()
+        black_alive, white_alive = self.board.benson_groups()
 
         if self.target == self.TO_LIVE:
             if self.to_play == 'black' and black_alive or self.to_play == 'white' and white_alive:
