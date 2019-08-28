@@ -3,7 +3,7 @@ from keras.models import Model
 from keras.optimizers import Adam
 from keras.regularizers import l2
 
-INPUT_DATA_SHAPE = (6, 19, 19)
+INPUT_DATA_SHAPE = (4, 19, 19)
 
 
 def create_model():
@@ -19,10 +19,6 @@ def create_model():
     layer = BatchNormalization()(layer)
     layer = Activation('relu')(layer)
 
-    layer = Conv2D(19, (5, 5), padding='same', kernel_regularizer=l2(l2const))(layer)
-    layer = BatchNormalization()(layer)
-    layer = Activation('relu')(layer)
-
     for _ in range(8):
         res = layer
         layer = Conv2D(19, (3, 3), padding='same', kernel_regularizer=l2(l2const))(layer)
@@ -30,17 +26,6 @@ def create_model():
         layer = Activation('relu')(layer)
 
         layer = Conv2D(19, (3, 3), padding='same', kernel_regularizer=l2(l2const))(layer)
-        layer = BatchNormalization()(layer)
-
-        layer = Add()([layer, res])
-        layer = Activation('relu')(layer)
-
-        res = layer
-        layer = Conv2D(19, (5, 5), padding='same', kernel_regularizer=l2(l2const))(layer)
-        layer = BatchNormalization()(layer)
-        layer = Activation('relu')(layer)
-
-        layer = Conv2D(19, (5, 5), padding='same', kernel_regularizer=l2(l2const))(layer)
         layer = BatchNormalization()(layer)
 
         layer = Add()([layer, res])
@@ -78,7 +63,11 @@ if __name__ == '__main__':
     length = all_data['problem'].shape[0]
     x, y = all_data['problem'][:], all_data['answers'][:].reshape(length, -1)
 
-    history = model.fit(x, y, validation_split=0.25, batch_size=256, epochs=20)
+    for epoch in range(9):
+        history = model.fit(x, y, validation_split=0.25, batch_size=256)
+        model.save_weights('weights.h5')
+
+    history = model.fit(x, y, validation_split=0.25, batch_size=256)
     model.save_weights('weights.h5')
 
     # Plot training & validation accuracy values

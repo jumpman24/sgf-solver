@@ -1,6 +1,10 @@
 import numpy as np
 
 
+class MoveException(Exception):
+    pass
+
+
 class Board:
     EMPTY = -1
     BLACK = 0
@@ -8,15 +12,12 @@ class Board:
     BLACK_LIBERTIES = 2
     WHITE_LIBERTIES = 3
 
-    def __init__(self, stones: np.ndarray, turn=BLACK):
+    def __init__(self, stones: np.ndarray, turn=BLACK, history=None):
         self._size = stones.shape[1]
-        self.board = np.zeros((4,) + stones.shape[1:], dtype=np.uint8)
-        self.board[:2] = np.array(stones[:2], copy=True)
-        self._vec_count_liberties = np.vectorize(self.count_liberties, excluded='self', otypes=[np.uint8])
-        self._update_liberties()
+        self.board = np.array(stones, copy=True)
 
         self._turn = turn
-        self._history = []
+        self._history = history or []
         self._score = {
             self.BLACK: 0,
             self.WHITE: 0,
@@ -61,10 +62,7 @@ class Board:
         """ Makes a move at given coordinates """
         loc = self._get_loc(x, y)
         if loc is not self.EMPTY:
-            print("Illegal move", x, y)
-            print(self)
-            print()
-            raise Exception(f"Cannot make a move on ({x},{y})")
+            raise MoveException(f"Point [{x},{y}] is already occupied.")
 
         self._push_history()
         self.board[self._turn, x, y] = 1
@@ -75,19 +73,18 @@ class Board:
 
         self._check_for_ko()
         self._flip_turn()
-        self._update_liberties()
 
     def _check_for_suicide(self, x, y):
         """ Check move for suicide """
         if self.count_liberties(x, y) == 0:
             self._pop_history()
-            raise Exception("Illegal move: suicide")
+            raise MoveException(f"Point [{x},{y}] is a suicide.")
 
     def _check_for_ko(self):
         """ Check move for ko """
         if len(self._history) > 1 and np.array_equal(self.board, self._history[-2][0]):
             self._pop_history()
-            raise Exception("Illegal move: ko")
+            raise MoveException("Illegal move: ko")
 
     def _take_pieces(self, x, y):
         """ Remove pieces if needed """
@@ -184,6 +181,74 @@ class Board:
 
         return self._get_group(x, y, set())
 
+    def _kill_group(self, x, y):
+        """ Remove group from the board and return stones amount """
+        loc = self._get_loc(x, y)
+        if loc is None or loc is self.EMPTY:
+            raise Exception("Can only kill black or white group")
+
+        group = self.get_group(x, y)
+        score = len(group)
+
+        for x1, y1 in group:
+            self.board[:, x1, y1] = 0
+
+        return score
+
+    def _get_liberties(self, x, y, traversed):
+        """ Recursively get liberties of group """
+        loc = self._get_loc(x, y)
+
+        if loc is self.EMPTY:
+            return {(x, y)}
+
+        else:
+            locations = [
+                (p, (a, b)) for p, (a, b) in self._get_surrounding(x, y)
+                if (p is loc or p is self.EMPTY) and (a, b) not in traversed
+            ]
+            traversed.add((x, y))
+
+            if locations:
+                return set.union(*[
+                    self._get_liberties(a, b, traversed)
+                    for _, (a, b) in locations
+                ])
+            else:
+                return set()
+
+    def get_liberties(self, x, y):
+        """ Get group liberties """
+        return self._get_liberties(x, y, set())
+
+    def count_liberties(self, x, y):
+        """ Count group liberties """
+        return len(self.get_liberties(x, y))
+
+    def legal_moves(self):
+        allowed = np.zeros((self._size, self._size))
+        for x in range(self._size):
+            for y in range(self._size):
+                try:
+                    self.move(x, y)
+                    allowed[x, y] = 1
+                    self._pop_history()
+                except MoveException:
+                    pass
+        return allowed.astype(int)
+
+
+class TsumegoBoard(Board):
+    BLACK_TO_PLAY = 'black'
+    WHITE_TO_PLAY = 'white'
+    TO_LIVE = 'live'
+    TO_KILL = 'kill'
+
+    def __init__(self, stones: np.ndarray, to_play=BLACK_TO_PLAY, target=TO_LIVE):
+        super().__init__(stones, 0 if to_play == self.BLACK_TO_PLAY else 1)
+        self.to_play = to_play
+        self.target = target
+
     def get_groups(self):
         black_groups = []
         white_groups = []
@@ -201,9 +266,6 @@ class Board:
                     group = self.get_group(x, y)
                     if group not in white_groups:
                         white_groups.append(group)
-
-        print('Black groups:', len(black_groups), black_groups)
-        print('White groups:', len(white_groups), white_groups)
 
         return black_groups, white_groups
 
@@ -250,9 +312,6 @@ class Board:
                     if region not in white_regions:
                         white_regions.append(region)
                         white_ignore.update(region)
-
-        print('Black regions:', len(black_regions), black_regions)
-        print('White regions:', len(white_regions), white_regions)
 
         return black_regions, white_regions
 
@@ -322,63 +381,31 @@ class Board:
             black_regions = self.vital_regions(black_regions, black_groups)
             white_regions = self.vital_regions(white_regions, white_groups)
 
-        print('black pass-alive', black_groups)
-        print('white pass-alive', white_groups)
-        print('black regions', black_regions)
-        print('white regions', white_regions)
+        return black_groups, white_groups
 
-        return black_groups, white_groups, black_regions, white_regions
+    def is_solved(self):
+        black_groups, white_groups = self.get_groups()
+        black_alive, white_alive = self.benson_groups()
 
-    def _kill_group(self, x, y):
-        """ Remove group from the board and return stones amount """
-        loc = self._get_loc(x, y)
-        if loc is None or loc is self.EMPTY:
-            raise Exception("Can only kill black or white group")
+        if self.target == self.TO_LIVE:
+            if self.to_play == 'black' and black_alive or self.to_play == 'white' and white_alive:
+                print(f"The {self.to_play} group is alive.")
+                return True
 
-        group = self.get_group(x, y)
-        score = len(group)
+            if self.to_play == 'black' and not black_groups or self.to_play == 'white' and not white_groups:
+                print(f"The {self.to_play} group is dead.")
+                return False
 
-        for x1, y1 in group:
-            self.board[:, x1, y1] = 0
+        if self.target == self.TO_KILL:
+            if self.to_play == 'black' and white_alive or self.to_play == 'white' and black_alive:
+                print(f"The {self.to_play} failed to kill.")
+                return False
 
-        return score
+            if self.to_play == 'black' and not black_groups or self.to_play == 'white' and not white_groups:
+                print(f"The {self.to_play} killed.")
+                return True
 
-    def _get_liberties(self, x, y, traversed):
-        """ Recursively get liberties of group """
-        loc = self._get_loc(x, y)
-
-        if loc is self.EMPTY:
-            return {(x, y)}
-
-        else:
-            locations = [
-                (p, (a, b)) for p, (a, b) in self._get_surrounding(x, y)
-                if (p is loc or p is self.EMPTY) and (a, b) not in traversed
-            ]
-            traversed.add((x, y))
-
-            if locations:
-                return set.union(*[
-                    self._get_liberties(a, b, traversed)
-                    for _, (a, b) in locations
-                ])
-            else:
-                return set()
-
-    def get_liberties(self, x, y):
-        """ Get group liberties """
-        return self._get_liberties(x, y, set())
-
-    def count_liberties(self, x, y):
-        """ Count group liberties """
-        return len(self.get_liberties(x, y))
-
-    def _update_liberties(self):
-        black_x, black_y = self.board[self.BLACK].nonzero()
-        white_x, white_y = self.board[self.WHITE].nonzero()
-
-        self.board[self.BLACK_LIBERTIES, black_x, black_y] = self._vec_count_liberties(black_x, black_y)
-        self.board[self.WHITE_LIBERTIES, white_x, white_y] = self._vec_count_liberties(white_x, white_y)
+        return None
 
 
 if __name__ == '__main__':
@@ -390,7 +417,3 @@ if __name__ == '__main__':
         sgf = SGFParser(f.read()).parse()
 
     b, _ = get_board_data(sgf.data[0].data[0])
-    # b[1, 0, 1] = 1
-    brd = Board(b)
-    print_problem(b)
-    brd.benson_groups()

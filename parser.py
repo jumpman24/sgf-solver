@@ -87,49 +87,17 @@ def parse_sgf_file(filepath: str):
     return SGFParser(sgf_data).parse()
 
 
-def save_to_file(train_data: List[List[List]], out_path):
-    raw_data = []
-
-    for example in train_data:
-        features = ''.join([''.join([str(x) for x in line]) for line in example])
-
-        raw_data.append(features)
-
-    with open(out_path, 'w+') as out:
-        out.write('\n'.join(raw_data))
-
-
-def print_board(data: List[List]):
-    res = ''
-    for line in data:
-        for item in line:
-            if item == BLACK:
-                res += 'X '
-            elif item == WHITE:
-                res += 'O '
-            else:
-                res += '. '
-        res += '\n'
-
-    print(res)
-
-
-
 def add_color_features(board_data):
     black_plane = board_data[0]
     white_plane = board_data[1]
-    black_liberties = board_data[2]
-    white_liberties = board_data[3]
 
     black_to_play = np.array([
         black_plane, white_plane,
-        black_liberties, white_liberties,
         np.ones([19, 19]), np.zeros([19, 19])
     ])
 
     white_to_play = np.array([
         white_plane, black_plane,
-        white_liberties, black_liberties,
         np.zeros([19, 19]), np.ones([19, 19])
     ])
 
