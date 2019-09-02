@@ -13,21 +13,21 @@ def init_model():
 
 
 class TsumegoNode(TsumegoBoard):
-    def find_children(self):
+    def find_children(self, model):
         if self.terminal:
             return set()
 
-        return {self.make_move(x, y)
-                for x in range(self.board_size)
-                for y in range(self.board_size) if self.legal_moves()[x, y] == 1}
+        possible_moves = self.predict(model)
+
+        return {self.make_move(x, y) for x, y in zip(*possible_moves.nonzero())}
 
     def find_random_children(self, model):
         pass
 
-    def predict(self, model):
+    def predict(self, model, threshold=0.02):
         predicted = model.predict([[[self.board]]]).reshape((19, 19))
-        predicted[self.legal_moves() == 0] = 0
-        predicted[predicted < 0.02] = 0
+        predicted[self.legal_moves() == 0] = 0  # abandon illegal moves
+        predicted[predicted < threshold] = 0  # abandon unlikely moves
         predicted = predicted / np.sum(predicted)
 
         return predicted
