@@ -3,7 +3,7 @@ from keras.models import Model
 from keras.optimizers import Adam
 from keras.regularizers import l2
 
-INPUT_DATA_SHAPE = (4, 19, 19)
+INPUT_DATA_SHAPE = (1, 19, 19)
 
 
 def create_model():
@@ -51,7 +51,7 @@ def create_model():
 
 if __name__ == '__main__':
     import os
-    from utils import all_data
+    from utils import get_problems
     import matplotlib.pyplot as plt
 
     model = create_model()
@@ -60,10 +60,11 @@ if __name__ == '__main__':
     if os.path.exists('weights.h5'):
         model.load_weights('weights.h5')
 
+    all_data = get_problems()
     length = all_data['problem'].shape[0]
     x, y = all_data['problem'][:], all_data['answers'][:].reshape(length, -1)
 
-    for epoch in range(9):
+    for epoch in range(29):
         history = model.fit(x, y, validation_split=0.25, batch_size=256)
         model.save_weights('weights.h5')
 

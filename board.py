@@ -6,17 +6,15 @@ class MoveException(Exception):
 
 
 class Board:
-    EMPTY = -1
-    BLACK = 0
-    WHITE = 1
-    BLACK_LIBERTIES = 2
-    WHITE_LIBERTIES = 3
+    BLACK = 1
+    EMPTY = 0
+    WHITE = -1
 
     def __init__(self, stones: np.ndarray, turn=BLACK, history=None):
         self.board_size = stones.shape[1]
-        self.board = np.array(stones, copy=True)
+        self.board = np.array(stones, dtype=int, copy=True)
 
-        self._turn = turn
+        self._turn = self.BLACK if turn == 0 else self.WHITE
         self._history = history or []
         self._score = {
             self.BLACK: 0,
@@ -24,17 +22,14 @@ class Board:
         }
 
     def __str__(self):
-        black = self.board[0]
-        white = self.board[1]
-
         board = []
 
         for x in range(19):
             line = ''
             for y in range(19):
-                if black[x, y] == 1:
+                if self.board[x, y] == self.BLACK:
                     line += '○ '
-                elif white[x, y] == 1:
+                elif self.board[x, y] == self.WHITE:
                     line += '● '
                 else:
                     line += '. '
@@ -42,13 +37,10 @@ class Board:
 
         return '\n'.join(board)
 
-    def copy(self):
-        return Board(self.board, self._turn, self._history)
-
     @property
     def turn(self):
         """ Current turn color """
-        return 'Black' if self._turn is self.BLACK else 'White'
+        return self._turn
 
     @property
     def score(self):
@@ -59,16 +51,17 @@ class Board:
     @property
     def _next_turn(self):
         """ Next turn """
-        return self.WHITE if self._turn is self.BLACK else self.BLACK
+        return self.WHITE if self._turn == self.BLACK else self.BLACK
 
     def move(self, x, y):
         """ Makes a move at given coordinates """
         loc = self._get_loc(x, y)
-        if loc is not self.EMPTY:
+
+        if loc != self.EMPTY:
             raise MoveException(f"Point [{x},{y}] is already occupied.")
 
         self._push_history()
-        self.board[self._turn, x, y] = 1
+        self.board[x, y] = self._turn
         taken = self._take_pieces(x, y)
 
         if taken == 0:
@@ -94,7 +87,7 @@ class Board:
         score = 0
         for p, (x1, y1) in self._get_surrounding(x, y):
             liberties = self.count_liberties(x1, y1)
-            if p is self._next_turn and liberties == 0:
+            if p == self._next_turn and liberties == 0:
                 score += self._kill_group(x1, y1)
 
         self._add_score(score)
@@ -135,14 +128,7 @@ class Board:
         if x < 0 or y < 0 or x >= self.board_size or y >= self.board_size:
             return None
 
-        elif self.board[0, x, y] == 1:
-            return self.BLACK
-
-        elif self.board[1, x, y] == 1:
-            return self.WHITE
-
-        else:
-            return self.EMPTY
+        return self.board[x, y]
 
     def _get_surrounding(self, x, y):
         """ Get surrounding stones """
@@ -167,7 +153,7 @@ class Board:
 
         locations = []
         for p, (a, b) in self._get_surrounding(x, y):
-            if p is loc and (a, b) not in traversed:
+            if p == loc and (a, b) not in traversed:
                 locations.append((p, (a, b)))
 
         traversed.add((x, y))
@@ -187,14 +173,14 @@ class Board:
     def _kill_group(self, x, y):
         """ Remove group from the board and return stones amount """
         loc = self._get_loc(x, y)
-        if loc is None or loc is self.EMPTY:
+        if loc is None or loc == self.EMPTY:
             raise Exception("Can only kill black or white group")
 
         group = self.get_group(x, y)
         score = len(group)
 
         for x1, y1 in group:
-            self.board[:, x1, y1] = 0
+            self.board[x1, y1] = 0
 
         return score
 
@@ -202,13 +188,13 @@ class Board:
         """ Recursively get liberties of group """
         loc = self._get_loc(x, y)
 
-        if loc is self.EMPTY:
+        if loc == self.EMPTY:
             return {(x, y)}
 
         else:
             locations = [
                 (p, (a, b)) for p, (a, b) in self._get_surrounding(x, y)
-                if (p is loc or p is self.EMPTY) and (a, b) not in traversed
+                if (p == loc or p == self.EMPTY) and (a, b) not in traversed
             ]
             traversed.add((x, y))
 
@@ -239,6 +225,21 @@ class Board:
                 except MoveException:
                     pass
         return allowed.astype(int)
+
+
+class TsumegoBoard(Board):
+    """It is always black to play!"""
+    TO_LIVE = 'live'
+    TO_KILL = 'kill'
+
+    def __init__(self, stones, turn, history, problem_type=TO_LIVE, winner=None):
+        super().__init__(stones, turn, history)
+        self.problem_type = problem_type
+        self.winner = winner
+
+    @property
+    def terminal(self):
+        return self.winner is not None
 
     def get_groups(self):
         black_groups = []
@@ -374,54 +375,47 @@ class Board:
 
         return black_groups, white_groups
 
-
-class TsumegoBoard:
-    BLACK_TO_PLAY = 'black'
-    WHITE_TO_PLAY = 'white'
-    TO_LIVE = 'live'
-    TO_KILL = 'kill'
-
-    def __init__(self, board: Board, to_play=BLACK_TO_PLAY, target=TO_LIVE):
-        self.board = board
-        self.to_play = to_play
-        self.target = target
-
-    def move_and_copy(self, x, y):
-        new_board = self.board.copy()
+    def make_move(self, x, y):
+        new_board = TsumegoBoard(self.board.copy(),
+                                 self.turn,
+                                 self._history.copy(),
+                                 self.problem_type)
         new_board.move(x, y)
-        return TsumegoBoard(new_board, self.to_play, self.target)
+        new_board.winner = new_board.is_solved()
+
+        return new_board
 
     def is_solved(self):
-        black_groups, white_groups = self.board.get_groups()
-        black_alive, white_alive = self.board.benson_groups()
+        black_groups, white_groups = self.get_groups()
+        black_alive, white_alive = self.benson_groups()
 
-        if self.target == self.TO_LIVE:
-            if self.to_play == 'black' and black_alive or self.to_play == 'white' and white_alive:
-                print(f"The {self.to_play} group is alive.")
+        if self.problem_type == self.TO_LIVE:
+            if black_alive:
+                print(f"Correct. The black group is alive.")
                 return True
 
-            if self.to_play == 'black' and not black_groups or self.to_play == 'white' and not white_groups:
-                print(f"The {self.to_play} group is dead.")
+            if not black_groups:
+                print(f"Wrong. The black group is dead.")
                 return False
 
-        if self.target == self.TO_KILL:
-            if self.to_play == 'black' and white_alive or self.to_play == 'white' and black_alive:
-                print(f"The {self.to_play} failed to kill.")
+        if self.problem_type == self.TO_KILL:
+            if white_alive:
+                print(f"Wrong. The white group is alive.")
                 return False
 
-            if self.to_play == 'black' and not black_groups or self.to_play == 'white' and not white_groups:
-                print(f"The {self.to_play} killed.")
+            if not white_groups:
+                print(f"Correct. The white group is dead.")
                 return True
 
         return None
 
-
-if __name__ == '__main__':
-    from sgflib import SGFParser
-    from parser import get_board_data
-    from utils import print_problem
-
-    with open('data/test/prob0001.sgf', 'r') as f:
-        sgf = SGFParser(f.read()).parse()
-
-    b, _ = get_board_data(sgf.data[0].data[0])
+    def reward(self):
+        if not self.terminal:
+            raise RuntimeError(f"reward called on nonterminal board")
+        if self.winner is True:
+            # It's your turn and you've already won. Should be impossible.
+            return 1
+        if self.winner is False:
+            return 0  # Your opponent has just won. Bad.
+        if self.winner is None:
+            return 0.5  # Board is a tie

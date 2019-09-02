@@ -7,9 +7,9 @@ import numpy as np
 from board import Board
 from sgflib import SGFParser, Node, GameTree
 
-EMPTY = 0
 BLACK = 1
-WHITE = 2
+EMPTY = 0
+WHITE = -1
 SGF_DIRS = ['data/cho_chikun_elementary', 'data/cho_chikun_intermediate']
 
 
@@ -30,15 +30,15 @@ def get_board_data(node: Node):
     black = node.get('AB').data
     white = node.get('AW').data
 
-    board = np.zeros((2, 19, 19))
+    board = np.zeros((19, 19))
 
     for stone in black:
         x, y = get_pos(stone)
-        board[0, x, y] = 1
+        board[x, y] = 1
 
     for stone in white:
         x, y = get_pos(stone)
-        board[1, x, y] = 1
+        board[x, y] = -1
 
     return board, sz
 
@@ -87,70 +87,25 @@ def parse_sgf_file(filepath: str):
     return SGFParser(sgf_data).parse()
 
 
-def add_color_features(board_data):
-    black_plane = board_data[0]
-    white_plane = board_data[1]
+def convert_board(board_data):
+    converted_plane = np.zeros((1, 19, 19))
+    converted_plane[0] = board_data
 
-    black_to_play = np.array([
-        black_plane, white_plane,
-        np.ones([19, 19]), np.zeros([19, 19])
-    ])
-
-    white_to_play = np.array([
-        white_plane, black_plane,
-        np.zeros([19, 19]), np.ones([19, 19])
-    ])
-
-    return black_to_play, white_to_play
-
-
-def generate_labels(answer_data):
-    generated = []
-    for data in answer_data:
-        generated.extend([
-            np.array(data),
-            np.flip(data, axis=(0,)),
-            np.flip(data, axis=(1,)),
-            np.flip(data, axis=(0, 1)),
-            np.transpose(data),
-            np.transpose(np.flip(data, axis=(0,))),
-            np.transpose(np.flip(data, axis=(1,))),
-            np.transpose(np.flip(data, axis=(0, 1)))])
-        generated.extend([
-            np.array(data),
-            np.flip(data, axis=(0,)),
-            np.flip(data, axis=(1,)),
-            np.flip(data, axis=(0, 1)),
-            np.transpose(data),
-            np.transpose(np.flip(data, axis=(0,))),
-            np.transpose(np.flip(data, axis=(1,))),
-            np.transpose(np.flip(data, axis=(0, 1)))])
-
-    return generated
+    return converted_plane
 
 
 def generate_boards(board_data):
     generated = []
     for data in board_data:
-        as_black, as_white = add_color_features(data)
         generated.extend([
-            np.array(as_black),
-            np.flip(as_black, axis=(1,)),
-            np.flip(as_black, axis=(2,)),
-            np.flip(as_black, axis=(1, 2)),
-            np.transpose(as_black, axes=(0, 2, 1)),
-            np.transpose(np.flip(as_black, axis=(1,)), axes=(0, 2, 1)),
-            np.transpose(np.flip(as_black, axis=(2,)), axes=(0, 2, 1)),
-            np.transpose(np.flip(as_black, axis=(1, 2)), axes=(0, 2, 1))])
-        generated.extend([
-            np.array(as_white),
-            np.flip(as_white, axis=(1,)),
-            np.flip(as_white, axis=(2,)),
-            np.flip(as_white, axis=(1, 2)),
-            np.transpose(as_white, axes=(0, 2, 1)),
-            np.transpose(np.flip(as_white, axis=(1,)), axes=(0, 2, 1)),
-            np.transpose(np.flip(as_white, axis=(2,)), axes=(0, 2, 1)),
-            np.transpose(np.flip(as_white, axis=(1, 2)), axes=(0, 2, 1))])
+            np.array(data),
+            np.flip(data, axis=(0,)),
+            np.flip(data, axis=(1,)),
+            np.flip(data, axis=(0, 1)),
+            np.transpose(data),
+            np.transpose(np.flip(data, axis=(0,))),
+            np.transpose(np.flip(data, axis=(1,))),
+            np.transpose(np.flip(data, axis=(0, 1)))])
 
     return generated
 
@@ -180,7 +135,7 @@ def parse_wrong_tree(board, tree):
     boards = []
     answers = []
 
-    brd = Board(np.array(board, copy=True)[[1, 0], :], Board.WHITE)
+    brd = Board(np.array(board, copy=True) * -1, Board.WHITE)
     for move in tree:
         if move.get('W'):
             x, y = get_pos(move.get('W').value)
@@ -267,7 +222,9 @@ if __name__ == '__main__':
             all_labels_data.append(l)
 
     data_features = np.array(generate_boards(all_feature_data))
-    data_labels = np.array(generate_labels(all_labels_data))
+    data_labels = np.array(generate_boards(all_labels_data))
+
+    # data_features = data_features.reshape((data_features.shape[0], 1, 19, 19))
 
     dataset = h5py.File('problems_all' + '.h5', 'w')
     dataset.create_dataset('problem', data=data_features)
