@@ -15,10 +15,13 @@ def init_model():
 
 class TsumegoNode(TsumegoBoard):
     def __hash__(self):
-        return hash(''.join(self.board.astype(str).flatten().tolist()))
+        l = list(np.copy(self.board).flatten().tolist())
+        for b, _, _ in self._history:
+            l.extend(list(np.copy(b).flatten().tolist()))
+        return hash(tuple(l))
 
     def __eq__(self, other):
-        return self.history == other.history and self.state == other.state
+        return hash(self) == hash(other)
 
     def move(self, x, y, update_allowed=True):
         super().move(x, y, update_allowed)
@@ -32,26 +35,26 @@ class TsumegoNode(TsumegoBoard):
 
         moves = self.predict(model)
 
-        return {self.make_move(x, y) for x, y in zip(*moves.nonzero())}
+        return {self.make_move(x, y, moves[x, y]) for x, y in zip(*moves.nonzero())}
 
     def find_random_child(self, model):
-        moves = self.predict(model).flatten()
-        rnd_idx = np.random.choice(np.arange(361), p=moves)
+        moves = self.predict(model)
+        rnd_idx = np.random.choice(np.arange(361), p=moves.flatten())
         x, y = np.where(np.arange(361).reshape((19, 19)) == rnd_idx)
 
-        return self.make_move(int(x), int(y))
+        return self.make_move(int(x), int(y), moves[x, y])
 
     @property
     def history(self):
         return [(np.copy(board), turn, score) for board, turn, score in self._history]
 
     def copy(self):
-        return TsumegoNode(self.board, self.turn, self.history, self.problem_type)
+        return TsumegoNode(self.board, self.turn, self.history, self.problem_type, self.score)
 
-    def make_move(self, x, y):
+    def make_move(self, x, y, weights):
         new_board = self.copy()
         new_board.move(x, y)
-
+        new_board.exploration_weight = weights
         return new_board
 
     def allow_predict(self):
@@ -73,14 +76,8 @@ class TsumegoNode(TsumegoBoard):
     def reward(self):
         if not self.is_terminal():
             raise RuntimeError(f"reward called on nonterminal board")
-        print(self.is_solved(), self.winner)
-        if self.winner is True:
-            # It's your turn and you've already won.
-            return 1
-        if self.winner is False:
-            return 0  # Your opponent has just won.
-        if self.winner is None:
-            return 0.5  # Not decided
+
+        return self.is_solved() or 0
 
     def predict(self, model):
         predicted = model.predict([[[self.board * self.turn]]]).reshape((19, 19))
@@ -98,6 +95,15 @@ if __name__ == '__main__':
     tree = MCTS(model)
     board = TsumegoNode(prob, 1, [], 'kill')
 
-    tree.do_rollout(board)
+    for i in range(32):
+        tree.do_rollout(board)
+        print('Rollout', i)
+        print([(tree.Q[n], tree.N[n]) for n in tree.children[board] if tree.N[n]])
 
-    print(tree.choose(board))
+    x = board
+    while True:
+        print(x)
+        try:
+            x = tree.choose(x)
+        except RuntimeError:
+            break

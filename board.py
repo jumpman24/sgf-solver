@@ -10,13 +10,13 @@ class Board:
     EMPTY = 0
     WHITE = -1
 
-    def __init__(self, stones: np.ndarray, turn=BLACK, history=None):
+    def __init__(self, stones: np.ndarray, turn=BLACK, history=None, score=None):
         self.board_size = stones.shape[1]
         self.board = np.array(stones, dtype=int, copy=True)
 
         self._turn = turn
         self._history = history or []
-        self._score = {
+        self._score = score.copy() if score is not None else {
             self.BLACK: 0,
             self.WHITE: 0,
         }
@@ -46,13 +46,12 @@ class Board:
     @property
     def score(self):
         """ Current score """
-        return {'Black': self._score[self.BLACK],
-                'White': self._score[self.WHITE]}
+        return self._score.copy()
 
     @property
     def state(self):
         """ Return game state """
-        return np.array(self.board, copy=True), self._turn, self._score
+        return np.array(self.board, copy=True), self._turn, self._score.copy()
 
     @property
     def _next_turn(self):
@@ -87,7 +86,7 @@ class Board:
 
     def _check_for_ko(self):
         """ Check move for ko """
-        if len(self._history) > 1 and np.array_equal(self.board, self._history[-2][0]):
+        if any(np.array_equal(self.board, hist[0]) for hist in reversed(self._history)):
             self._pop_history()
             raise MoveException("Illegal move: ko")
 
@@ -237,9 +236,10 @@ class TsumegoBoard(Board):
     TO_LIVE = 'live'
     TO_KILL = 'kill'
 
-    def __init__(self, stones, turn, history, problem_type=TO_LIVE):
-        super().__init__(stones, turn, history)
+    def __init__(self, stones, turn, history, problem_type=TO_LIVE, score=None):
+        super().__init__(stones, turn, history, score)
         self.problem_type = problem_type
+        self.exploration_weight = 0
 
     @property
     def winner(self):
@@ -383,26 +383,34 @@ class TsumegoBoard(Board):
 
         return black_groups, white_groups
 
+    def reach(self):
+        if self._history:
+            board = TsumegoBoard(self._history[0][0], self.turn, [])
+        else:
+            board = self
+        black, white = board.get_groups()
+        targets = black if self.problem_type == self.TO_LIVE else white
+        return sum([len(t) for t in targets])
+
     def is_solved(self):
         black_groups, white_groups = self.get_groups()
         black_alive, white_alive = self.benson_groups()
-
         if self.problem_type == self.TO_LIVE:
             if black_alive:
-                print(f"Correct. The black group is alive.")
-                return True
+                # print(f"Correct. The black group is alive.")
+                return 1
 
-            if not black_groups:
-                print(f"Wrong. The black group is dead.")
-                return False
+            if not black_groups or self.score[self.WHITE] >= self.reach():
+                # print(f"Wrong. The black group is dead.")
+                return -1
 
         if self.problem_type == self.TO_KILL:
             if white_alive:
-                print(f"Wrong. The white group is alive.")
-                return False
+                # print(f"Wrong. The white group is alive.")
+                return -1
 
-            if not white_groups:
-                print(f"Correct. The white group is dead.")
-                return True
+            if not white_groups or self.score[self.BLACK] >= self.reach():
+                # print(f"Correct. The white group is dead.")
+                return 1
 
         return None
