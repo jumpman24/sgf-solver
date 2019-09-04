@@ -5,11 +5,12 @@ from collections import defaultdict
 class MCTS:
     "Monte Carlo tree searcher. First rollout the tree then choose a move."
 
-    def __init__(self, exploration_weight=1):
+    def __init__(self, model, exploration_weight=1):
         self.Q = defaultdict(int)  # total reward of each node
         self.N = defaultdict(int)  # total visit count for each node
         self.children = dict()  # children of each node
         self.exploration_weight = exploration_weight
+        self.model = model
 
     def choose(self, node):
         """Choose the best successor of node. (Choose a move in the game)"""
@@ -17,7 +18,7 @@ class MCTS:
             raise RuntimeError(f"choose called on terminal node {node}")
 
         if node not in self.children:
-            return node.find_random_child()
+            return node.find_random_child(self.model)
 
         def score(n):
             if self.N[n] == 0:
@@ -53,7 +54,7 @@ class MCTS:
         """Update the `children` dict with the children of `node`"""
         if node in self.children:
             return  # already expanded
-        self.children[node] = node.find_children()
+        self.children[node] = node.find_children(self.model)
 
     def _simulate(self, node):
         """Returns the reward for a random simulation (to completion) of `node`"""
@@ -62,7 +63,7 @@ class MCTS:
             if node.is_terminal():
                 reward = node.reward()
                 return 1 - reward if invert_reward else reward
-            node = node.find_random_child()
+            node = node.find_random_child(self.model)
             invert_reward = not invert_reward
 
     def _backpropagate(self, path, reward):

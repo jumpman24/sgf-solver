@@ -14,12 +14,13 @@ class Board:
         self.board_size = stones.shape[1]
         self.board = np.array(stones, dtype=int, copy=True)
 
-        self._turn = self.BLACK if turn == 0 else self.WHITE
+        self._turn = turn
         self._history = history or []
         self._score = {
             self.BLACK: 0,
             self.WHITE: 0,
         }
+        self.allowed_moves = self.legal_moves()
 
     def __str__(self):
         board = []
@@ -49,11 +50,16 @@ class Board:
                 'White': self._score[self.WHITE]}
 
     @property
+    def state(self):
+        """ Return game state """
+        return np.array(self.board, copy=True), self._turn, self._score
+
+    @property
     def _next_turn(self):
         """ Next turn """
-        return self.WHITE if self._turn == self.BLACK else self.BLACK
+        return -self._turn
 
-    def move(self, x, y):
+    def move(self, x, y, update_allowed=True):
         """ Makes a move at given coordinates """
         loc = self._get_loc(x, y)
 
@@ -69,6 +75,9 @@ class Board:
 
         self._check_for_ko()
         self._flip_turn()
+
+        if update_allowed:
+            self.allowed_moves = self.legal_moves()
 
     def _check_for_suicide(self, x, y):
         """ Check move for suicide """
@@ -98,18 +107,13 @@ class Board:
         self._turn = self._next_turn
         return self._turn
 
-    @property
-    def _state(self):
-        """ Return game state """
-        return np.array(self.board, copy=True), self._turn, self._score
-
     def _load_state(self, state):
         """ Load given game state """
         self.board, self._turn, self._score = state
 
     def _push_history(self):
         """ Push game state to history """
-        self._history.append(self._state)
+        self._history.append(self.state)
 
     def _pop_history(self):
         """ Load and remove game state from history """
@@ -215,15 +219,16 @@ class Board:
         return len(self.get_liberties(x, y))
 
     def legal_moves(self):
-        allowed = np.zeros((self.board_size, self.board_size))
-        for x in range(self.board_size):
-            for y in range(self.board_size):
+        allowed = np.zeros((19, 19))
+        for x in range(19):
+            for y in range(19):
                 try:
-                    self.move(x, y)
+                    self.move(x, y, False)
                     allowed[x, y] = 1
                     self._pop_history()
                 except MoveException:
                     pass
+
         return allowed.astype(int)
 
 
@@ -232,10 +237,13 @@ class TsumegoBoard(Board):
     TO_LIVE = 'live'
     TO_KILL = 'kill'
 
-    def __init__(self, stones, turn, history, problem_type=TO_LIVE, winner=None):
+    def __init__(self, stones, turn, history, problem_type=TO_LIVE):
         super().__init__(stones, turn, history)
         self.problem_type = problem_type
-        self.winner = winner
+
+    @property
+    def winner(self):
+        return self.is_solved()
 
     @property
     def terminal(self):
@@ -375,16 +383,6 @@ class TsumegoBoard(Board):
 
         return black_groups, white_groups
 
-    def make_move(self, x, y):
-        new_board = TsumegoBoard(self.board.copy(),
-                                 self.turn,
-                                 self._history.copy(),
-                                 self.problem_type)
-        new_board.move(x, y)
-        new_board.winner = new_board.is_solved()
-
-        return new_board
-
     def is_solved(self):
         black_groups, white_groups = self.get_groups()
         black_alive, white_alive = self.benson_groups()
@@ -408,14 +406,3 @@ class TsumegoBoard(Board):
                 return True
 
         return None
-
-    def reward(self):
-        if not self.terminal:
-            raise RuntimeError(f"reward called on nonterminal board")
-        if self.winner is True:
-            # It's your turn and you've already won. Should be impossible.
-            return 1
-        if self.winner is False:
-            return 0  # Your opponent has just won. Bad.
-        if self.winner is None:
-            return 0.5  # Board is a tie
