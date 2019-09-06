@@ -1,35 +1,60 @@
+from enum import IntEnum
 from typing import List, Dict, Tuple, Set
 
 import numpy as np
 
-BLACK = 1
-EMPTY = 0
-WHITE = -1
 
 Coord = Tuple[int, int]
 Chain = Set[Coord]
 Score = Dict[int, int]
 
 
+class Location(IntEnum):
+    BLACK = 1
+    EMPTY = 0
+    WHITE = -1
+
+
 class CoordinateError(Exception):
     pass
 
 
-class MoveError(Exception):
+class IllegalMoveError(Exception):
     pass
 
 
 class GoBoard:
-    def __init__(self, board: np.ndarray, turn: int, score: Dict[int, int] = None,
+    def __init__(self, board: np.ndarray, turn: Location, score: Dict[int, int] = None,
                  history: List[Tuple[np.ndarray, int, Score]] = None):
         self._board = np.array(board, copy=True, dtype=int)
         self._turn = turn
-        self._score = score or {BLACK: 0, WHITE: 0}
-        self._history = history.copy() or []
+        self._score = score or {Location.BLACK: 0, Location.WHITE: 0}
+        self._history = history.copy() if history else []
+
+    def __repr__(self):
+        return f"GoBoard: {len(self._history)} moves, {self.turn} to play"
+
+    def __str__(self):
+        print_map = {
+            Location.BLACK: '○ ',
+            Location.WHITE: '● ',
+            Location.EMPTY: '. ',
+        }
+        board = ""
+        for x in range(19):
+            for y in range(19):
+                board += print_map[self._get_loc(x, y)]
+            board += "\n"
+
+        return board
+
+    @property
+    def turn(self):
+        return 'black' if self._turn is Location.BLACK else 'white'
 
     @property
     def next_turn(self) -> int:
-        return -self._turn
+        return Location.BLACK if self._turn is Location.WHITE else Location.WHITE
 
     def _flip_turn(self) -> None:
         self._turn = self.next_turn
@@ -47,12 +72,12 @@ class GoBoard:
     def _pop_history(self) -> None:
         self._board, self._turn, self._score = self._history.pop()
 
-    def _get_loc(self, x: int, y: int) -> int:
+    def _get_loc(self, x: int, y: int) -> Location:
         if not (0 <= x < 19 and 0 <= y < 19):
             raise CoordinateError(f"Coordinate {x, y} is out of bounds")
-        return self._board[x, y]
+        return Location(self._board[x, y])
 
-    def _get_surrounding(self, x0: int, y0: int) -> Tuple[int, Coord]:
+    def _get_surrounding(self, x0: int, y0: int) -> Tuple[Location, Coord]:
         coords = (
             (x0, y0 - 1),
             (x0 + 1, y0),
@@ -66,7 +91,7 @@ class GoBoard:
             except CoordinateError:
                 pass
 
-    def _get_chain(self, loc: int, x0: int, y0: int) -> Chain:
+    def _get_chain(self, loc: Location, x0: int, y0: int) -> Chain:
         explored = set()
         unexplored = {(x0, y0)}
 
@@ -81,8 +106,17 @@ class GoBoard:
 
     def _get_group(self, x: int, y: int) -> Chain:
         loc = self._get_loc(x, y)
-        if loc is EMPTY:
-            raise CoordinateError(f"Coordinate {x, y} is empty")
+
+        if loc is Location.EMPTY:
+            raise CoordinateError(f"Empty")
+
+        return self._get_chain(loc, x, y)
+
+    def _get_area(self, x: int, y: int) -> Chain:
+        loc = self._get_loc(x, y)
+
+        if loc is not Location.EMPTY:
+            raise CoordinateError(f"Not empty")
 
         return self._get_chain(loc, x, y)
 
@@ -91,7 +125,7 @@ class GoBoard:
         liberties = set()
 
         for x, y in group:
-            liberties |= {coord for p, coord in self._get_surrounding(x, y) if p == EMPTY}
+            liberties |= {coord for p, coord in self._get_surrounding(x, y) if p is Location.EMPTY}
 
         return group, liberties
 
@@ -104,7 +138,7 @@ class GoBoard:
         self._board[tuple(zip(*group))] = 0
         return len(group)
 
-    def _take_pieces(self, x0, y0):
+    def _capture(self, x0, y0):
         """ Remove pieces if needed """
         score = 0
 
@@ -121,63 +155,26 @@ class GoBoard:
 
         if not liberties:
             self._pop_history()
-            raise MoveError(f"Illegal move: suicide")
+            raise IllegalMoveError("Suicide")
 
-    def _check_for_ko(self):
+    def _check_ko(self):
         for history_board, turn, score in reversed(self._history):
             if np.array_equal(self._board, history_board):
                 self._pop_history()
-                raise MoveError(f"Illegal move: ko")
+                raise IllegalMoveError("Ko")
 
     def move(self, x, y):
         loc = self._get_loc(x, y)
 
-        if loc != EMPTY:
-            raise MoveError(f"Coordinate {x, y} is not empty.")
+        if loc is not Location.EMPTY:
+            raise IllegalMoveError("Not empty")
 
+        self._push_history()
+        self._board[x, y] = self._turn
+        captured = self._capture(x, y)
 
-if __name__ == '__main__':
-    import time
+        if not captured:
+            self._check_suicide(x, y)
 
-    stones = np.array([
-        [1, -1, -1, -1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    ])
-    brd = GoBoard(stones, BLACK)
-    start1 = time.time()
-    for i in range(1000):
-        gx = brd._get_group_liberties(0, 0)
-    end1 = time.time()
-
-    print(len(gx), end1 - start1)
-
-    start2 = time.time()
-    for i in range(1000):
-        gy = brd._get_group_liberties(0, 2)
-    end2 = time.time()
-
-    print(len(gy), end2 - start2)
-
-    start3 = time.time()
-    for i in range(1000):
-        gz = brd._get_group_liberties(2, 0)
-    end3 = time.time()
-
-    print(len(gz), end3 - start3)
+        self._check_ko()
+        self._flip_turn()
