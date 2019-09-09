@@ -1,31 +1,15 @@
-from enum import IntEnum
-from typing import List, Dict, Tuple, Set, FrozenSet
 from itertools import product
+from typing import List, Tuple, Set
+
 import numpy as np
 
-
-Coord = Tuple[int, int]
-Chain = FrozenSet[Coord]
-Score = Dict[int, int]
-
-
-class Location(IntEnum):
-    BLACK = 1
-    EMPTY = 0
-    WHITE = -1
-
-
-class CoordinateError(Exception):
-    pass
-
-
-class IllegalMoveError(Exception):
-    pass
+from .constants import Location, ScoreType, ChainType, CoordType
+from .exceptions import CoordinateError, IllegalMoveError
 
 
 class GoBoard:
-    def __init__(self, board: np.ndarray, turn: Location, score: Dict[int, int] = None,
-                 history: List[Tuple[np.ndarray, int, Score]] = None):
+    def __init__(self, board: np.ndarray, turn: Location, score: ScoreType = None,
+                 history: List[Tuple[np.ndarray, int, ScoreType]] = None):
         self._board = np.array(board, copy=True, dtype=int)
         self._turn = turn
         self._score = score or {Location.BLACK: 0, Location.WHITE: 0}
@@ -43,41 +27,54 @@ class GoBoard:
         board = ""
         for x in range(19):
             for y in range(19):
-                board += print_map[self._get_loc(x, y)]
+                coord = x, y
+                board += print_map[self._get_loc(coord)]
             board += "\n"
 
         return board
 
     @property
     def turn(self):
+        """ Current player color """
         return 'black' if self._turn is Location.BLACK else 'white'
 
     @property
     def next_turn(self) -> int:
+        """ Next player color """
         return Location.BLACK if self._turn is Location.WHITE else Location.WHITE
 
     def _flip_turn(self) -> None:
+        """ Change turn """
         self._turn = self.next_turn
 
-    def _add_score(self, score) -> None:
+    def _add_score(self, score: int) -> None:
+        """ Add captured stones to score """
         self._score[self._turn] += score
 
     @property
-    def _state(self) -> Tuple[np.ndarray, int, Score]:
+    def _state(self) -> Tuple[np.ndarray, int, ScoreType]:
+        """ Current game state
+        Represented as current board position, turn and score
+        """
         return np.copy(self._board), self._turn, self._score.copy()
 
     def _push_history(self) -> None:
+        """ Add current state to game history """
         self._history.append(self._state)
 
     def _pop_history(self) -> None:
+        """ Load previous board position """
         self._board, self._turn, self._score = self._history.pop()
 
-    def _get_loc(self, x: int, y: int) -> Location:
-        if not (0 <= x < 19 and 0 <= y < 19):
-            raise CoordinateError(f"Coordinate {x, y} is out of bounds")
-        return Location(self._board[x, y])
+    def _get_loc(self, coord: CoordType) -> Location:
+        """ Get location of coordinate """
+        if not all([0 <= xy < 19 for xy in coord]):
+            raise CoordinateError(f"Coordinate {coord} is out of bounds")
+        return Location(self._board[coord])
 
-    def _get_surrounding(self, x0: int, y0: int) -> Tuple[Location, Coord]:
+    def _get_surrounding(self, coord0: CoordType) -> Tuple[Location, CoordType]:
+        """ Get surrounding locations if possible """
+        x0, y0 = coord0
         coords = (
             (x0, y0 - 1),
             (x0 + 1, y0),
@@ -85,60 +82,65 @@ class GoBoard:
             (x0 - 1, y0),
         )
 
-        for x, y in coords:
+        for coord in coords:
             try:
-                yield self._get_loc(x, y), (x, y)
+                yield self._get_loc(coord), coord
             except CoordinateError:
                 pass
 
-    def _get_chain(self, loc: Location, x0: int, y0: int) -> Chain:
+    def _get_chain(self, loc: Location, coord0: CoordType) -> ChainType:
+        """ Get connected chain of stones or empty area
+
+        :param loc: color to retrieve
+        :param coord0: position to start
+        :return:
+        """
         explored = set()
-        unexplored = {(x0, y0)}
+        unexplored = {coord0}
 
         while unexplored:
-            x, y = unexplored.pop()
-            unexplored |= {coord for p, coord in self._get_surrounding(x, y) if p == loc}
+            coord = unexplored.pop()
+            unexplored |= {coord for p, coord in self._get_surrounding(coord) if p == loc}
 
-            explored.add((x, y))
+            explored.add(coord)
             unexplored -= explored
 
         return frozenset(explored)
 
-    def _get_group(self, x: int, y: int) -> Chain:
-        loc = self._get_loc(x, y)
+    def _get_chain_surrounding(self, loc: Location, chain: ChainType) -> Set[Tuple[Location, CoordType]]:
+        surrounding = set()
+
+        for coord in chain:
+            surrounding |= {coord for p, coord in self._get_surrounding(coord) if p is not loc}
+
+        return surrounding
+
+    def _get_group(self, coord: CoordType) -> ChainType:
+        loc = self._get_loc(coord)
 
         if loc is Location.EMPTY:
             raise CoordinateError(f"Empty")
 
-        return self._get_chain(loc, x, y)
+        return self._get_chain(loc, coord)
 
-    def _get_area(self, x: int, y: int) -> Chain:
-        loc = self._get_loc(x, y)
+    def _get_area(self, coord: CoordType) -> ChainType:
+        loc = self._get_loc(coord)
 
         if loc is not Location.EMPTY:
             raise CoordinateError(f"Not empty")
 
-        return self._get_chain(loc, x, y)
+        return self._get_chain(loc, coord)
 
-    def _get_group_liberties(self, x: int, y: int) -> Tuple[Chain, Set]:
-        group = self._get_group(x, y)
+    def _get_liberties(self, group: ChainType) -> Set[CoordType]:
         liberties = set()
 
-        for x, y in group:
-            liberties |= {coord for p, coord in self._get_surrounding(x, y) if p is Location.EMPTY}
+        for coord in group:
+            liberties |= {coord for p, coord in self._get_surrounding(coord) if p is Location.EMPTY}
 
-        return group, liberties
+        return liberties
 
-    def _get_chain_surrounding(self, loc: Location, chain: Chain) -> Set[Tuple[Location, Coord]]:
-        surrounding = set()
-
-        for x, y in chain:
-            surrounding |= {coord for p, coord in self._get_surrounding(x, y) if p is not loc}
-
-        return surrounding
-
-    def _kill_group(self, x: int, y: int) -> int:
-        group, liberties = self._get_group_liberties(x, y)
+    def _kill_group(self, group: ChainType) -> int:
+        liberties = self._get_liberties(group)
 
         if liberties:
             return 0
@@ -146,55 +148,63 @@ class GoBoard:
         self._board[tuple(zip(*group))] = 0
         return len(group)
 
-    def _capture(self, x0, y0):
+    def _capture(self, coord0: CoordType):
         """ Remove pieces if needed """
         score = 0
 
-        for p, (x, y) in self._get_surrounding(x0, y0):
+        for p, coord in self._get_surrounding(coord0):
             if p == self.next_turn:
-                score += self._kill_group(x, y)
-
-        self._add_score(score)
+                group = self._get_group(coord)
+                score += self._kill_group(group)
 
         return score
 
-    def _check_suicide(self, x, y):
-        group, liberties = self._get_group_liberties(x, y)
+    def _check_suicide(self, coord: CoordType):
+        """ Verify that played stone has at least one liberty """
+        group = self._get_group(coord)
+        liberties = self._get_liberties(group)
 
         if not liberties:
             self._pop_history()
             raise IllegalMoveError("Suicide")
 
     def _check_ko(self):
+        """ Verify that ko rule is not violated """
         for history_board, turn, score in reversed(self._history):
             if np.array_equal(self._board, history_board):
                 self._pop_history()
                 raise IllegalMoveError("Ko")
 
-    def move(self, x, y):
-        loc = self._get_loc(x, y)
+    def move(self, coord: CoordType):
+        loc = self._get_loc(coord)
 
         if loc is not Location.EMPTY:
             raise IllegalMoveError("Not empty")
 
         self._push_history()
-        self._board[x, y] = self._turn
-        captured = self._capture(x, y)
+        self._board[coord] = self._turn
+        captured = self._capture(coord)
 
-        if not captured:
-            self._check_suicide(x, y)
+        if captured:
+            self._add_score(captured)
+        else:
+            self._check_suicide(coord)
 
         self._check_ko()
+        self._flip_turn()
+
+    def make_pass(self):
+        self._push_history()
         self._flip_turn()
 
     @property
     def legal_moves(self):
         legal_moves = np.zeros((19, 19), dtype=int)
-        for x, y in product(range(19), range(19)):
+        for coord in product(range(19), range(19)):
             try:
-                self.move(x, y)
+                self.move(coord)
                 self._pop_history()
-                legal_moves[x, y] = 1
+                legal_moves[coord] = 1
             except IllegalMoveError:
                 pass
 

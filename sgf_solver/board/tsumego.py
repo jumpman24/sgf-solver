@@ -1,14 +1,11 @@
 from enum import Enum
 from itertools import product
-from typing import Dict, Tuple, FrozenSet, Set, Optional
+from typing import Tuple, Set, Optional
 
 import numpy as np
 
-from sgf_solver.board import GoBoard, Location
-
-Coord = Tuple[int, int]
-Chain = FrozenSet[Coord]
-Score = Dict[int, int]
+from sgf_solver.board import GoBoard
+from .constants import Location, ChainType, CoordType
 
 
 class ProblemType(Enum):
@@ -22,14 +19,14 @@ class TsumegoBoard(GoBoard):
         self._type = problem_type
         self._stones = stones
 
-    def _get_groups(self, color: Location) -> Set[Chain]:
+    def _get_groups(self, color: Location) -> Set[ChainType]:
         unexplored = np.array(self._board == color, dtype=int)
         groups = set()
 
-        for x, y in product(range(19), range(19)):
+        for coord in product(range(19), range(19)):
 
-            if unexplored[x, y]:
-                group = self._get_group(x, y)
+            if unexplored[coord]:
+                group = self._get_group(coord)
                 groups.add(group)
                 unexplored[tuple(zip(*group))] = 0
 
@@ -43,15 +40,15 @@ class TsumegoBoard(GoBoard):
 
         return stones
 
-    def _get_region(self, loc: Location, x0: int, y0: int) -> Chain:
+    def _get_region(self, loc: Location, coord0: CoordType) -> ChainType:
         explored = set()
-        unexplored = {(x0, y0)}
+        unexplored = {coord0}
 
         while unexplored:
-            x, y = unexplored.pop()
-            unexplored |= {coord for p, coord in self._get_surrounding(x, y) if p != loc}
+            coord = unexplored.pop()
+            unexplored |= {coord for p, coord in self._get_surrounding(coord) if p != loc}
 
-            explored.add((x, y))
+            explored.add(coord)
             unexplored -= explored
 
         return frozenset(explored)
@@ -59,10 +56,10 @@ class TsumegoBoard(GoBoard):
     def _get_regions(self, color: Location):
         unexplored = np.array(self._board != color, dtype=int)
         regions = set()
-        for x, y in product(range(19), range(19)):
+        for coord in product(range(19), range(19)):
 
-            if unexplored[x, y]:
-                region = self._get_region(color, x, y)
+            if unexplored[coord]:
+                region = self._get_region(color, coord)
                 regions.add(region)
                 unexplored[tuple(zip(*region))] = 0
 
@@ -80,7 +77,7 @@ class TsumegoBoard(GoBoard):
 
         return eyes
 
-    def alive_groups(self, loc: Location) -> Tuple[Set[Chain], Set[Chain]]:
+    def alive_groups(self, loc: Location) -> Tuple[Set[ChainType], Set[ChainType]]:
         groups = self._get_groups(loc)
         regions = self._get_regions(loc)
 
