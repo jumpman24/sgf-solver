@@ -72,36 +72,52 @@ class TsumegoBoard(GoBoard):
         surrounding = self._get_chain_surrounding(loc, group)
         return region.issubset(surrounding)
 
-    def _is_chain_alive(self, loc: Location, group, regions):
-        eyes = 0
+    def _chain_eyes(self, loc: Location, group, regions):
+        eyes = set()
         for region in regions:
             if self._is_chain_eye(loc, group, region):
-                eyes += 1
+                eyes.add(region)
 
-        return eyes > 1
+        return eyes
 
-    def alive_groups(self, loc: Location) -> Set[Chain]:
+    def alive_groups(self, loc: Location) -> Tuple[Set[Chain], Set[Chain]]:
         groups = self._get_groups(loc)
         regions = self._get_regions(loc)
 
-        while True:
-            alive, dead = set(), set()
+        if groups:
+            while True:
+                alive, dead, vitals = set(), set(), set()
 
-            for group in groups:
-                if self._is_chain_alive(loc, group, regions):
-                    alive.add(group)
-                else:
-                    dead.add(group)
+                for group in groups:
+                    eyes = self._chain_eyes(loc, group, regions)
 
-            if not dead:
-                return alive
+                    if len(eyes) >= 2:
+                        alive.add(group)
+                        vitals |= eyes
+                    else:
+                        dead.add(group)
 
-            for group in dead:
-                for region in regions:
-                    if self._is_chain_eye(loc, group, region):
-                        regions.remove(region)
+                if not dead:
+                    return alive, vitals
 
-            groups = alive
+                for group in dead:
+                    for region in regions.copy():
+                        if self._is_chain_eye(loc, group, region):
+                            regions.remove(region)
+
+                groups = alive
+
+        return set(), set()
+
+    def moves_to_consider(self):
+        moves = self.legal_moves
+
+        for loc in [Location.BLACK, Location.WHITE]:
+            _, eyes = self.alive_groups(loc)
+            for region in eyes:
+                moves[tuple(zip(*region))] = 0
+
+        return moves
 
     def solved(self) -> Optional[bool]:
         if self._type == ProblemType.LIVE:
@@ -127,44 +143,3 @@ class TsumegoBoard(GoBoard):
                 return True
 
         return None
-
-
-if __name__ == '__main__':
-    prob = np.array([
-        # [0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        # [1, -1, -1, 0, 1, -1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        # [0, 1, -1, 0, -1, -1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        # [0, 1, -1, -1, -1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        # [0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 1, -1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, -1, -1, 0, 1, 0]
-    ])
-    board = TsumegoBoard(ProblemType.LIVE, board=prob, turn=Location.BLACK)
-
-    print(board.solved())
-    import time
-
-    start = time.time()
-    for _ in range(1000):
-        board.alive_groups(Location.BLACK)
-    end = time.time()
-
-    print(board.alive_groups(Location.BLACK))
-    print(end - start)

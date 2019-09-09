@@ -189,7 +189,7 @@ class GoBoard:
 
     @property
     def legal_moves(self):
-        legal_moves = np.zeros((19, 19))
+        legal_moves = np.zeros((19, 19), dtype=int)
         for x, y in product(range(19), range(19)):
             try:
                 self.move(x, y)
