@@ -1,11 +1,11 @@
 from enum import IntEnum
-from typing import List, Dict, Tuple, Set
-
+from typing import List, Dict, Tuple, Set, FrozenSet
+from itertools import product
 import numpy as np
 
 
 Coord = Tuple[int, int]
-Chain = Set[Coord]
+Chain = FrozenSet[Coord]
 Score = Dict[int, int]
 
 
@@ -102,7 +102,7 @@ class GoBoard:
             explored.add((x, y))
             unexplored -= explored
 
-        return explored
+        return frozenset(explored)
 
     def _get_group(self, x: int, y: int) -> Chain:
         loc = self._get_loc(x, y)
@@ -120,7 +120,7 @@ class GoBoard:
 
         return self._get_chain(loc, x, y)
 
-    def _get_group_liberties(self, x: int, y: int) -> Tuple[Chain, Chain]:
+    def _get_group_liberties(self, x: int, y: int) -> Tuple[Chain, Set]:
         group = self._get_group(x, y)
         liberties = set()
 
@@ -128,6 +128,14 @@ class GoBoard:
             liberties |= {coord for p, coord in self._get_surrounding(x, y) if p is Location.EMPTY}
 
         return group, liberties
+
+    def _get_chain_surrounding(self, loc: Location, chain: Chain) -> Set[Tuple[Location, Coord]]:
+        surrounding = set()
+
+        for x, y in chain:
+            surrounding |= {coord for p, coord in self._get_surrounding(x, y) if p is not loc}
+
+        return surrounding
 
     def _kill_group(self, x: int, y: int) -> int:
         group, liberties = self._get_group_liberties(x, y)
@@ -178,3 +186,16 @@ class GoBoard:
 
         self._check_ko()
         self._flip_turn()
+
+    @property
+    def legal_moves(self):
+        legal_moves = np.zeros((19, 19))
+        for x, y in product(range(19), range(19)):
+            try:
+                self.move(x, y)
+                self._pop_history()
+                legal_moves[x, y] = 1
+            except IllegalMoveError:
+                pass
+
+        return legal_moves
