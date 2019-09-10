@@ -3,7 +3,8 @@ from typing import List, Tuple, Set
 
 import numpy as np
 
-from .constants import Location, ScoreType, ChainType, CoordType
+from .annotations import ScoreType, ChainType, CoordType
+from .constants import Location
 from .exceptions import CoordinateError, IllegalMoveError
 
 
@@ -107,7 +108,8 @@ class GoBoard:
 
         return frozenset(explored)
 
-    def _get_chain_surrounding(self, loc: Location, chain: ChainType) -> Set[Tuple[Location, CoordType]]:
+    def _get_chain_surrounding(self, loc: Location, chain: ChainType) -> Set[
+        Tuple[Location, CoordType]]:
         surrounding = set()
 
         for coord in chain:

@@ -1,20 +1,15 @@
-from enum import Enum
 from itertools import product
 from typing import Tuple, Set, Optional
 
 import numpy as np
 
 from sgf_solver.board import GoBoard
-from .constants import Location, ChainType, CoordType
-
-
-class ProblemType(Enum):
-    LIVE = 'live'
-    KILL = 'kill'
+from .annotations import ChainType, CoordType
+from .constants import Location, ProblemClass
 
 
 class TsumegoBoard(GoBoard):
-    def __init__(self, problem_type: ProblemType, stones: int = 0, **kwargs):
+    def __init__(self, problem_type: ProblemClass, stones: int = 0, **kwargs):
         super().__init__(**kwargs)
         self._type = problem_type
         self._stones = stones
@@ -35,7 +30,7 @@ class TsumegoBoard(GoBoard):
     def _count_target_stones(self):
         stones = 0
         for group in self._get_groups(
-                Location.WHITE if self._type == ProblemType.KILL else Location.BLACK):
+                Location.WHITE if self._type == ProblemClass.KILL else Location.BLACK):
             stones += len(group)
 
         return stones
@@ -117,7 +112,7 @@ class TsumegoBoard(GoBoard):
         return moves
 
     def solved(self) -> Optional[bool]:
-        if self._type == ProblemType.LIVE:
+        if self._type == ProblemClass.LIVE:
 
             if self.alive_groups(Location.BLACK):
                 return True
@@ -128,7 +123,7 @@ class TsumegoBoard(GoBoard):
             if self._score[Location.WHITE] >= self._stones:
                 return False
 
-        if self._type == ProblemType.KILL:
+        if self._type == ProblemClass.KILL:
 
             if self.alive_groups(Location.WHITE):
                 return False
