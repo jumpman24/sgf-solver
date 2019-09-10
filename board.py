@@ -123,7 +123,7 @@ class Board:
             pass
 
     def _add_score(self, score):
-        """ Add point to current player's score """
+        """ Add point to current player'sgf_coord score """
         self._score[self._turn] += score
 
     def _get_loc(self, x, y):

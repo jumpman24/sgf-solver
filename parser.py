@@ -205,7 +205,7 @@ if __name__ == '__main__':
     all_feature_data = []
     all_labels_data = []
     for sgf_path in sorted(all_sgf_files):
-        if os.path.splitext(sgf_path)[1] != '.sgf':
+        if os.path.splitext(sgf_path)[1] != '.tree':
             continue
 
         sgf = parse_sgf_file(sgf_path).data[0]

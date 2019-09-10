@@ -5,7 +5,7 @@ import numpy as np
 
 from sgf_solver.board import GoBoard
 from .annotations import ChainType, CoordType
-from .constants import Location, ProblemClass
+from sgf_solver.constants import Location, ProblemClass
 
 
 class TsumegoBoard(GoBoard):

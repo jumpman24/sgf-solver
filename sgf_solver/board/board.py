@@ -4,7 +4,7 @@ from typing import List, Tuple, Set
 import numpy as np
 
 from .annotations import ScoreType, ChainType, CoordType
-from .constants import Location
+from sgf_solver.constants import Location
 from .exceptions import CoordinateError, IllegalMoveError
 
 

@@ -87,7 +87,7 @@ class Collection(UserList):
 
 class Property(UserList):
     """
-    An SGF property: a set of label and value(s). Instance attributes:
+    An SGF property: a set of label and value(sgf_coord). Instance attributes:
       - self[.data] : list of str -- property values.
       - self.label : string -- SGF standard property label."""
 
@@ -336,7 +336,7 @@ class Cursor:
       - self.node_num : integer -- The offset of [self.node] from the root of [self.game].
         The node_num of the root node is 0.
       - self.index : integer -- The offset of [self.node] within [self.game_tree].
-      - self.stack : list of [GameTree] -- A record of [GameTree]s traversed.
+      - self.stack : list of [GameTree] -- A record of [GameTree]sgf_coord traversed.
       - self.children : list of [Node] -- All child nodes of the current node.
       - self.atEnd : boolean -- Flags if we are at the end of a branch.
       - self.atStart : boolean -- Flags if we are at the start of the game."""
