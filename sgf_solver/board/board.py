@@ -9,7 +9,7 @@ from .exceptions import CoordinateError, IllegalMoveError
 
 
 class GoBoard:
-    def __init__(self, board: np.ndarray, turn: Location, score: ScoreType = None,
+    def __init__(self, board: np.ndarray, turn: Location = Location.BLACK, score: ScoreType = None,
                  history: List[Tuple[np.ndarray, int, ScoreType]] = None):
         self._board = np.array(board, copy=True, dtype=int)
         self._turn = turn
@@ -33,6 +33,10 @@ class GoBoard:
             board += "\n"
 
         return board
+
+    @property
+    def board(self):
+        return np.copy(self._board)
 
     @property
     def turn(self):
