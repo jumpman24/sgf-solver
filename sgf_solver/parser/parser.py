@@ -4,10 +4,8 @@ import h5py
 import numpy as np
 
 from sgf_solver.board import CoordType, GoBoard
-from sgf_solver.constants import Location, BOARD_SHAPE
+from sgf_solver.constants import Location, BOARD_SHAPE, PROBLEM_DATASET, PROBLEM_PATH
 from sgf_solver.parser.sgflib import Node, GameTree, SGFParser
-
-SGF_DIR = '/Users/ohili/PycharmProjects/sgf-solver/data'
 
 
 def parse_sgf_file(filepath: str) -> GameTree:
@@ -92,7 +90,7 @@ def parse_tree(tree: list):
             raise Exception("No move in move node")
 
         # find the next move
-        answer = np.zeros(BOARD_SHAPE)
+        answer = np.zeros(BOARD_SHAPE, dtype=int)
         answer[coord] = 1
 
         # store problem, value and answers
@@ -175,7 +173,7 @@ def sgf_to_problems(sgf: GameTree):
 
 if __name__ == '__main__':
     all_sgf_files = []
-    for directory, _, files in os.walk(SGF_DIR):
+    for directory, _, files in os.walk(PROBLEM_PATH):
         for filename in files:
             if os.path.splitext(filename)[1] == '.sgf':
                 all_sgf_files.append(os.path.join(directory, filename))
@@ -197,11 +195,11 @@ if __name__ == '__main__':
               f"good: {good_count:-4d}, bad: {bad_count:-4d}", end='')
     print()
 
-    with h5py.File('problems_all.h5', 'w') as dataset:
-        dataset.create_dataset('problem', data=all_problems)
+    with h5py.File(PROBLEM_DATASET, 'w') as dataset:
+        dataset.create_dataset('problems', data=all_problems)
         dataset.create_dataset('values', data=all_values)
         dataset.create_dataset('answers', data=all_answers)
-        print(dataset['problem'].shape)
+        print(dataset['problems'].shape)
         print(dataset['values'].shape)
         print(dataset['answers'].shape)
         dataset.close()

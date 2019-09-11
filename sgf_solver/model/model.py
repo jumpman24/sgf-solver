@@ -42,6 +42,7 @@ def create_model():
     value_head = layer
     value_head = Dense(FILTER_SIZE, kernel_regularizer=l2(1e-4))(value_head)
     value_head = Activation("relu")(value_head)
+    value_head = Flatten()(value_head)
     value_head = Dense(1)(value_head)
     value_head = Activation("tanh", name="vh")(value_head)
 
@@ -51,13 +52,14 @@ def create_model():
     policy_head = Activation('relu')(policy_head)
     policy_head = Flatten()(policy_head)
     policy_head = Dense(361)(policy_head)
-    policy_head = Activation('softmax')(policy_head)
+    policy_head = Activation('softmax', name="ph")(policy_head)
 
     model = Model(inputs=[input_], outputs=[value_head, policy_head])
     model.compile(
         optimizer=Adam(),
-        loss='categorical_crossentropy',
-        metrics=['accuracy']
+        loss=["mean_squared_error", "categorical_crossentropy"],
+        loss_weights=[0.5, 0.5],
+        metrics=["accuracy"]
     )
 
     return model
