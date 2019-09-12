@@ -4,7 +4,7 @@ from typing import Tuple, Set, Optional
 import numpy as np
 
 from sgf_solver.board import GoBoard
-from .annotations import ChainType, CoordType
+from sgf_solver.annotations import ChainType, CoordType
 from sgf_solver.constants import Location, ProblemClass
 
 
@@ -13,6 +13,9 @@ class TsumegoBoard(GoBoard):
         super().__init__(**kwargs)
         self._type = problem_type
         self._stones = stones
+
+    def __hash__(self):
+        return hash(str(self._board) + str(self.legal_moves))
 
     def _get_groups(self, color: Location) -> Set[ChainType]:
         unexplored = np.array(self._board == color, dtype=int)

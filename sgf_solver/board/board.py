@@ -3,9 +3,9 @@ from typing import List, Tuple, Set
 
 import numpy as np
 
-from .annotations import ScoreType, ChainType, CoordType
+from sgf_solver.annotations import ScoreType, ChainType, CoordType
 from sgf_solver.constants import Location
-from .exceptions import CoordinateError, IllegalMoveError
+from sgf_solver.exceptions import CoordinateError, IllegalMoveError
 
 
 class GoBoard:
@@ -37,6 +37,10 @@ class GoBoard:
     @property
     def board(self):
         return np.copy(self._board)
+
+    @property
+    def history(self):
+        return self._history.copy()
 
     @property
     def turn(self):
