@@ -1,9 +1,10 @@
 import h5py
 import numpy as np
+import os
 
 
 def get_problems():
-    return h5py.File('problems_all.h5', 'r')
+    return h5py.File('/Users/ohili/PycharmProjects/sgf-solver/problems_all.h5', 'r')
 
 
 def print_problem_and_answer(problem, answers=None):
@@ -29,7 +30,7 @@ def print_problem_and_answer(problem, answers=None):
 
 
 def print_from_collection(collection, number):
-    return print_problem_and_answer(collection['problem'][number],
+    return print_problem_and_answer(collection['problems'][number],
                                     collection['answers'][number])
 
 

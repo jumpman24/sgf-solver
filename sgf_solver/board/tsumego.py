@@ -117,7 +117,7 @@ class TsumegoBoard(GoBoard):
     def solved(self) -> Optional[bool]:
         if self._type == ProblemClass.LIVE:
 
-            if self.alive_groups(Location.BLACK):
+            if self.alive_groups(Location.BLACK)[0]:
                 return True
 
             if not self._stones:
@@ -128,7 +128,7 @@ class TsumegoBoard(GoBoard):
 
         if self._type == ProblemClass.KILL:
 
-            if self.alive_groups(Location.WHITE):
+            if self.alive_groups(Location.WHITE)[0]:
                 return False
 
             if not self._stones:
