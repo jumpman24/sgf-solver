@@ -1,15 +1,25 @@
 from sgf_solver.board.tsumego import TsumegoBoard
-from sgf_solver.constants import ProblemClass
+from sgf_solver.annotations import CoordType
+from sgf_solver.constants import ProblemClass, BOARD_SHAPE
 from keras.models import Model
 
 
-class TsumegoNode(TsumegoBoard):
-    def __init__(self, problem_type: ProblemClass, **kwargs):
-        super().__init__(problem_type, **kwargs)
+class TsumegoNode:
+    def __init__(self, tsumego: TsumegoBoard, coord: CoordType):
+        self._tsumego = tsumego
         self.W = 0
         self.N = 0
         self.P = 0
+        self.coord = None
+        self.value = 0
+        self.visits = 0
+        self.policy = None
         self.terminal = self.solved() is not None
+
+    def evaluate(self, model: Model):
+        value, policy = model.predict([[[self._board]]])
+        self.value = value.item()
+        self.policy = policy.reshape(BOARD_SHAPE) * self.legal_moves
 
     def reward(self):
         solved = self.solved()
