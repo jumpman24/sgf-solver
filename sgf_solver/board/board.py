@@ -61,7 +61,7 @@ class GoBoard:
         self._score[self._turn] += score
 
     @property
-    def _state(self) -> Tuple[np.ndarray, int, ScoreType]:
+    def state(self) -> Tuple[np.ndarray, int, ScoreType]:
         """ Current game state
         Represented as current board position, turn and score
         """
@@ -69,7 +69,7 @@ class GoBoard:
 
     def _push_history(self) -> None:
         """ Add current state to game history """
-        self._history.append(self._state)
+        self._history.append(self.state)
 
     def _pop_history(self) -> None:
         """ Load previous board position """

@@ -17,6 +17,11 @@ class TsumegoBoard(GoBoard):
     def __hash__(self):
         return hash(str(self._board) + str(self.legal_moves))
 
+    def copy(self):
+        board, turn, score = self.state
+        history = self.history
+        return TsumegoBoard(self._type, board=board, turn=turn, score=score, history=history)
+
     def _get_groups(self, color: Location) -> Set[ChainType]:
         unexplored = np.array(self._board == color, dtype=int)
         groups = set()
