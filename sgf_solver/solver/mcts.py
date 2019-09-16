@@ -1,8 +1,9 @@
-import math
 from collections import defaultdict
+
 from keras.models import Model
+
 from sgf_solver.board.tsumego import TsumegoBoard
-from sgf_solver.solver.node import TsumegoNode
+from sgf_solver.solver.node import Node
 
 
 class TreeSearch:
@@ -11,7 +12,7 @@ class TreeSearch:
         self.children = defaultdict(set)
         self.model = model
 
-    def rollout(self, node: TsumegoNode, times: int = 1):
+    def rollout(self, node: Node, times: int = 1):
         for i in range(times):
             print('rollout', i)
             path = self._select(node)
@@ -19,7 +20,7 @@ class TreeSearch:
             reward = self._expand_and_evaluate(parent, leaf)
             self._backup(path, reward)
 
-    def _select(self, node: TsumegoNode):
+    def _select(self, node: Node):
         path = [None, ]
         while True:
             print('select')
@@ -30,7 +31,7 @@ class TreeSearch:
 
             node = node.next_child()
 
-    def _expand_and_evaluate(self, parent: TsumegoNode, leaf: TsumegoNode):
+    def _expand_and_evaluate(self, parent: Node, leaf: Node):
         """Add root to children nodes and return reward"""
         print('expand')
         if leaf not in self.children[node]:
@@ -60,6 +61,6 @@ if __name__ == '__main__':
     print_from_collection(probs, 55555)
     prob = probs['problems'][55555]
     board = TsumegoBoard(ProblemClass.LIVE, board=prob)
-    node = TsumegoNode(board)
+    node = Node(board)
 
     tree.rollout(node, 1600)

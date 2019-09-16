@@ -4,3 +4,7 @@ class CoordinateError(Exception):
 
 class IllegalMoveError(Exception):
     pass
+
+
+class ParserError(Exception):
+    pass

@@ -3,9 +3,9 @@ from typing import Tuple, Set, Optional
 
 import numpy as np
 
-from sgf_solver.board import GoBoard
 from sgf_solver.annotations import ChainType, CoordType
-from sgf_solver.constants import Location, ProblemClass
+from sgf_solver.board import GoBoard
+from sgf_solver.enums import Location, ProblemClass
 
 
 class TsumegoBoard(GoBoard):

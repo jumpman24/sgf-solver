@@ -1,16 +1,17 @@
-from sgf_solver.board.tsumego import TsumegoBoard
+import math
+
+import numpy as np
 from keras.models import Model
 
-import math
-import numpy as np
+from sgf_solver.board.tsumego import TsumegoBoard
 
 
-class TsumegoNode:
+class Node:
     def __init__(self, board: TsumegoBoard):
         self._visits = np.zeros(361, dtype=int)
         self._value = None
         self._policy = None
-        self._children = np.zeros(361, dtype=TsumegoNode)
+        self._children = np.zeros(361, dtype=Node)
         self.board = board
 
     def __hash__(self):
@@ -37,7 +38,7 @@ class TsumegoNode:
 
         next_idx = int(np.argmax(action_values))
 
-        if isinstance(self._children[next_idx], TsumegoNode):
+        if isinstance(self._children[next_idx], Node):
             return self._children[next_idx]
 
         self.make_move(next_idx)
@@ -62,5 +63,5 @@ class TsumegoNode:
         board = self.board.copy()
         board.move(divmod(next_idx, 19))
 
-        self._children[next_idx] = TsumegoNode(board)
+        self._children[next_idx] = Node(board)
         return self._children[next_idx]

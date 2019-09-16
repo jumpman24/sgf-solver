@@ -5,9 +5,28 @@ import numpy as np
 
 from sgf_solver.annotations import CoordType
 from sgf_solver.board import GoBoard
-from sgf_solver.constants import Location, BOARD_SHAPE, PROBLEM_DATASET, PROBLEM_PATH
+from sgf_solver.constants import BOARD_SHAPE, PROBLEM_DATASET, PROBLEM_PATH
+from sgf_solver.enums import Location
+from sgf_solver.exceptions import ParserError
 from sgf_solver.parser.sgflib import Node, GameTree, SGFParser
 
+
+class TsumegoParser:
+    def __init__(self, path: str):
+        self._path = path
+        self.data = None
+
+    def _parse_file(self):
+        if not os.path.exists(self._path):
+            raise ParserError(f"File not found: {self._path}")
+
+        with open(filepath) as file:
+            sgf_data = file.read()
+
+        self.data = SGFParser(sgf_data).parse()[0]
+
+    def _get_coord(self, coord: str):
+        pass
 
 def parse_sgf_file(filepath: str) -> GameTree:
     with open(filepath) as file:
@@ -18,7 +37,7 @@ def parse_sgf_file(filepath: str) -> GameTree:
 
 def get_coord(sgf_coord: str) -> CoordType:
     if len(sgf_coord) != 2:
-        raise Exception("Wrong coordinates")
+        raise ParserError("Wrong coordinates")
 
     return ord(sgf_coord[1]) - 97, ord(sgf_coord[0]) - 97
 
@@ -88,7 +107,7 @@ def parse_tree(tree: list):
         coord = get_coord(node.get(color).value)
 
         if not coord:
-            raise Exception("No move in move node")
+            raise ParserError("No move in move node")
 
         # find the next move
         answer = np.zeros(BOARD_SHAPE, dtype=int)
