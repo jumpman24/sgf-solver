@@ -14,22 +14,20 @@ class TreeSearch:
     def rollout(self, node: TsumegoNode, times: int = 1):
         for i in range(times):
             print('rollout', i)
-            path, parent = self._select(node)
-            leaf = path[-1]
+            path = self._select(node)
+            parent, leaf = path[-2:]
             reward = self._expand_and_evaluate(parent, leaf)
             self._backup(path, reward)
 
     def _select(self, node: TsumegoNode):
-        path = []
-        parent = None
+        path = [None, ]
         while True:
             print('select')
             path.append(node)
 
             if node not in self.children or node.terminal:
-                return path, parent
+                return path
 
-            parent = node
             node = node.next_child()
 
     def _expand_and_evaluate(self, parent: TsumegoNode, leaf: TsumegoNode):
@@ -37,7 +35,9 @@ class TreeSearch:
         print('expand')
         if leaf not in self.children[node]:
             leaf.evaluate(self.model)
-            self.children[parent].add(leaf)
+
+            if parent:
+                self.children[parent].add(leaf)
 
         return leaf.reward()
 

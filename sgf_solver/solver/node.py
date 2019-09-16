@@ -35,7 +35,7 @@ class TsumegoNode:
         idx = self._visits.nonzero()
         action_values[idx] += self._policy[idx] / self._visits[idx]
 
-        next_idx = np.argmax(action_values)
+        next_idx = int(np.argmax(action_values))
 
         if isinstance(self._children[next_idx], TsumegoNode):
             return self._children[next_idx]

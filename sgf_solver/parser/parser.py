@@ -3,7 +3,8 @@ import os
 import h5py
 import numpy as np
 
-from sgf_solver.board import CoordType, GoBoard
+from sgf_solver.annotations import CoordType
+from sgf_solver.board import GoBoard
 from sgf_solver.constants import Location, BOARD_SHAPE, PROBLEM_DATASET, PROBLEM_PATH
 from sgf_solver.parser.sgflib import Node, GameTree, SGFParser
 
@@ -199,7 +200,4 @@ if __name__ == '__main__':
         dataset.create_dataset('problems', data=all_problems)
         dataset.create_dataset('values', data=all_values)
         dataset.create_dataset('answers', data=all_answers)
-        print(dataset['problems'].shape)
-        print(dataset['values'].shape)
-        print(dataset['answers'].shape)
         dataset.close()
