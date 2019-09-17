@@ -3,21 +3,23 @@ from typing import List, Tuple, Set
 
 import numpy as np
 
-from sgf_solver.annotations import ScoreType, ChainType, CoordType
+from sgf_solver.annotations import ScoreType, ChainType, CoordType, PositionType, HistoryType
 from sgf_solver.enums import Location
 from sgf_solver.exceptions import CoordinateError, IllegalMoveError
 
 
 class GoBoard:
-    def __init__(self, board: np.ndarray, turn: Location = Location.BLACK, score: ScoreType = None,
-                 history: List[Tuple[np.ndarray, int, ScoreType]] = None):
+    def __init__(self, board: PositionType,
+                 turn: Location = Location.BLACK,
+                 score: ScoreType = None,
+                 history: HistoryType = None):
         self._board = np.array(board, copy=True, dtype=int)
         self._turn = turn
         self._score = score or {Location.BLACK: 0, Location.WHITE: 0}
         self._history = history.copy() if history else []
 
     def __repr__(self):
-        return f"GoBoard: {len(self._history)} moves, {self.turn} to play"
+        return f"GoBoard: {len(self._history)} moves, {self.turn_color} to play"
 
     def __str__(self):
         print_map = {
@@ -44,6 +46,11 @@ class GoBoard:
 
     @property
     def turn(self):
+        """ Current player """
+        return self._turn
+
+    @property
+    def turn_color(self):
         """ Current player color """
         return 'black' if self._turn is Location.BLACK else 'white'
 

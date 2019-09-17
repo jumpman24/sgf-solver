@@ -47,7 +47,7 @@ class Node:
         self._value += value
 
     def evaluate(self, model: Model):
-        value, policy = model.predict([[[self.board.board * self.board.turn]]])
+        value, policy = model.predict([[[self.board.board * self.board.turn_color]]])
         self._value = value.item()
         self._policy = policy * self.board.legal_moves.flatten()
 

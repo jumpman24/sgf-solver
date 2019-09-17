@@ -1,18 +1,14 @@
 from functools import partial
+
 from keras.layers import BatchNormalization, Conv2D, Input, Add, Activation, Flatten, Dense
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.regularizers import l2
 
-INPUT_DATA_SHAPE = (1, 19, 19)
+from sgf_solver.constants import INPUT_DATA_SHAPE, CHANNELS_AMOUNT, RESIDUAL_BLOCKS, L2_CONST
 
-CHANNELS_AMOUNT = 32
-RESIDUAL_BLOCKS = 8
-
-L2_CONST = 1e-4
-
-RegularizedConv2D = partial(Conv2D, kernel_regularizer=l2(L2_CONST))
-PaddedConv2D = partial(Conv2D, padding='same', kernel_regularizer=l2(L2_CONST))
+RegularizedConv2D = partial(Conv2D, data_format='channels_first')
+PaddedConv2D = partial(RegularizedConv2D, padding='same', kernel_regularizer=l2(L2_CONST))
 
 
 def create_model():
@@ -20,10 +16,6 @@ def create_model():
 
     layer = input_
     layer = RegularizedConv2D(CHANNELS_AMOUNT, (1, 1))(layer)
-    layer = BatchNormalization()(layer)
-    layer = Activation('relu')(layer)
-
-    layer = PaddedConv2D(CHANNELS_AMOUNT, (3, 3))(layer)
     layer = BatchNormalization()(layer)
     layer = Activation('relu')(layer)
 
@@ -40,14 +32,15 @@ def create_model():
         layer = Activation('relu')(layer)
 
     value_head = layer
-    value_head = Dense(CHANNELS_AMOUNT, kernel_regularizer=l2(1e-4))(value_head)
+    value_head = RegularizedConv2D(1, (1, 1))(value_head)
+    value_head = BatchNormalization()(value_head)
     value_head = Activation("relu")(value_head)
     value_head = Flatten()(value_head)
     value_head = Dense(1)(value_head)
     value_head = Activation("tanh", name="vh")(value_head)
 
     policy_head = layer
-    policy_head = RegularizedConv2D(CHANNELS_AMOUNT, (1, 1))(policy_head)
+    policy_head = RegularizedConv2D(2, (1, 1))(policy_head)
     policy_head = BatchNormalization()(policy_head)
     policy_head = Activation('relu')(policy_head)
     policy_head = Flatten()(policy_head)
@@ -61,5 +54,7 @@ def create_model():
         loss_weights=[0.5, 0.5],
         metrics=["accuracy"]
     )
-
+    model.summary()
     return model
+
+create_model()

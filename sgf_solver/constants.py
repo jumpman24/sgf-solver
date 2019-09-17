@@ -1,5 +1,10 @@
-BOARD_SIZE = 19
 BOARD_SHAPE = (19, 19)
 
+INPUT_DATA_SHAPE = (2, 19, 19)
+CHANNELS_AMOUNT = 16
+RESIDUAL_BLOCKS = 4
+L2_CONST = 1e-4
+
 PROBLEM_PATH = '/Users/ohili/PycharmProjects/sgf-solver/data'
-PROBLEM_DATASET = '/Users/ohili/PycharmProjects/sgf-solver/problems_all.h5'
+PROBLEM_DATASET = '/Users/ohili/PycharmProjects/sgf-solver/cho_chikun_dataset.h5'
+WEIGHTS_PATH = '/Users/ohili/PycharmProjects/sgf-solver/weights.h5'
