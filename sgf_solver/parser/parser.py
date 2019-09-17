@@ -231,9 +231,8 @@ if __name__ == '__main__':
         print(f"\rProblems created: {good_count + bad_count:-6d}, "
               f"good: {good_count:-4d}, bad: {bad_count:-4d}", end='')
     print()
-
     with h5py.File(PROBLEM_DATASET, 'w') as dataset:
-        dataset.create_dataset('problems', data=all_problems)
-        dataset.create_dataset('values', data=all_values)
-        dataset.create_dataset('answers', data=all_answers)
+        dataset.create_dataset('problems', data=np.array(all_problems))
+        dataset.create_dataset('values', data=np.array(all_values))
+        dataset.create_dataset('answers', data=np.array(all_answers))
         dataset.close()

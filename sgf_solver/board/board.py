@@ -1,9 +1,19 @@
 from itertools import product
-from typing import List, Tuple, Set
+from typing import Set
 
 import numpy as np
 
-from sgf_solver.annotations import ScoreType, ChainType, CoordType, PositionType, HistoryType
+from sgf_solver.annotations import (
+    PositionType,
+    ScoreType,
+    StateType,
+    HistoryType,
+    CoordType,
+    LocatedCoordType,
+    LocatedSurroundType,
+    ChainType,
+)
+from sgf_solver.constants import BOARD_SHAPE
 from sgf_solver.enums import Location
 from sgf_solver.exceptions import CoordinateError, IllegalMoveError
 
@@ -68,7 +78,7 @@ class GoBoard:
         self._score[self._turn] += score
 
     @property
-    def state(self) -> Tuple[np.ndarray, int, ScoreType]:
+    def state(self) -> StateType:
         """ Current game state
         Represented as current board position, turn and score
         """
@@ -88,7 +98,7 @@ class GoBoard:
             raise CoordinateError(f"Coordinate {coord} is out of bounds")
         return Location(self._board[coord])
 
-    def _get_surrounding(self, coord0: CoordType) -> Tuple[Location, CoordType]:
+    def _get_surrounding(self, coord0: CoordType) -> LocatedCoordType:
         """ Get surrounding locations if possible """
         x0, y0 = coord0
         coords = (
@@ -123,8 +133,7 @@ class GoBoard:
 
         return frozenset(explored)
 
-    def _get_chain_surrounding(self, loc: Location, chain: ChainType) -> Set[
-        Tuple[Location, CoordType]]:
+    def _get_chain_surrounding(self, loc: Location, chain: ChainType) -> LocatedSurroundType:
         surrounding = set()
 
         for coord in chain:
@@ -216,7 +225,7 @@ class GoBoard:
 
     @property
     def legal_moves(self):
-        legal_moves = np.zeros((19, 19), dtype=int)
+        legal_moves = np.zeros(BOARD_SHAPE, dtype=int)
         for coord in product(range(19), range(19)):
             try:
                 self.move(coord)

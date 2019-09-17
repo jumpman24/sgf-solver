@@ -1,12 +1,19 @@
-from typing import List, Dict, Tuple, FrozenSet
-from sgf_solver.parser.sgflib import Node
+from typing import List, Dict, Tuple, Set, FrozenSet, Union
+
 from numpy import ndarray
 
+from sgf_solver.enums import Location
+from sgf_solver.parser.sgflib import Node
+
 CoordType = Tuple[int, int]
-ChainType = FrozenSet[CoordType]
+ChainType = Union[FrozenSet[CoordType], Set[CoordType]]
+LocatedCoordType = Tuple[Location, CoordType]
+LocatedSurroundType = Set[LocatedCoordType]
+
 ScoreType = Dict[int, int]
 PositionType = ndarray
-HistoryType = List[Tuple[PositionType, int, ScoreType]]
+StateType = Tuple[ndarray, int, ScoreType]
+HistoryType = List[StateType]
 NodeListType = List[Node]
 CollectionType = List[NodeListType]
 DataCollectionType = Tuple[List[ndarray], List[ndarray], List[ndarray]]

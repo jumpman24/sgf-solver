@@ -21,13 +21,15 @@ def load_problems():
 
 def train_model(problems, values, answers):
     model = create_model()
-    model.summary()
 
     if os.path.exists(WEIGHTS_PATH):
         model.load_weights(WEIGHTS_PATH)
 
     for i in range(10):
-        model.fit(problems, [values, answers], batch_size=pow(2, 10), epochs=10, initial_epoch=i*10)
+        model.fit(problems, [values, answers],
+                  batch_size=128,
+                  epochs=50,
+                  shuffle=True)
         model.save_weights(WEIGHTS_PATH)
 
 

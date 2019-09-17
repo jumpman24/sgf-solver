@@ -1,29 +1,75 @@
 import h5py
 import numpy as np
-import os
+from sgf_solver.constants import PROBLEM_DATASET
+
+
+class ConsoleColor:
+    CEND = '\33[0m'
+    CBOLD = '\33[1m'
+    CITALIC = '\33[3m'
+    CURL = '\33[4m'
+    CBLINK = '\33[5m'
+    CBLINK2 = '\33[6m'
+    CSELECTED = '\33[7m'
+
+    CBLACK = '\33[30m'
+    CRED = '\33[31m'
+    CGREEN = '\33[32m'
+    CYELLOW = '\33[33m'
+    CBLUE = '\33[34m'
+    CVIOLET = '\33[35m'
+    CBEIGE = '\33[36m'
+    CWHITE = '\33[37m'
+
+    CBLACKBG = '\33[40m'
+    CREDBG = '\33[41m'
+    CGREENBG = '\33[42m'
+    CYELLOWBG = '\33[43m'
+    CBLUEBG = '\33[44m'
+    CVIOLETBG = '\33[45m'
+    CBEIGEBG = '\33[46m'
+    CWHITEBG = '\33[47m'
+
+    CGREY = '\33[90m'
+    CRED2 = '\33[91m'
+    CGREEN2 = '\33[92m'
+    CYELLOW2 = '\33[93m'
+    CBLUE2 = '\33[94m'
+    CVIOLET2 = '\33[95m'
+    CBEIGE2 = '\33[96m'
+    CWHITE2 = '\33[97m'
+
+    CGREYBG = '\33[100m'
+    CREDBG2 = '\33[101m'
+    CGREENBG2 = '\33[102m'
+    CYELLOWBG2 = '\33[103m'
+    CBLUEBG2 = '\33[104m'
+    CVIOLETBG2 = '\33[105m'
+    CBEIGEBG2 = '\33[106m'
+    CWHITEBG2 = '\33[107m'
 
 
 def get_problems():
-    return h5py.File('/Users/ohili/PycharmProjects/sgf-solver/problems_all.h5', 'r')
+    return h5py.File(PROBLEM_DATASET, 'r')
 
 
 def print_problem_and_answer(problem, answers=None):
-    size_x, size_y = problem.shape
     if answers is None:
         answers = np.zeros(problem.shape)
 
     board = ''
 
-    for x in range(size_x):
-        for y in range(size_y):
-            if problem[x, y] == 1:
-                board += '○ '
-            elif problem[x, y] == -1:
-                board += '● '
+    for x in range(19):
+        for y in range(19):
+            if problem[0, x, y] == 1:
+                board += ConsoleColor.CBLUE + '●'
+            elif problem[0, x, y] == -1:
+                board += ConsoleColor.CYELLOW + '●'
             elif answers[x, y] == 1:
-                board += 'x '
+                board += ConsoleColor.CRED + ConsoleColor.CBLINK + 'x'
             else:
-                board += '. '
+                board += '.'
+            board += ConsoleColor.CEND + ' '
         board += '\n'
 
     print(board)
@@ -34,15 +80,6 @@ def print_from_collection(collection, number):
                                     collection['answers'][number])
 
 
-def train_test_split(data):
-    length = data['problem'].shape[0]
-    threshold = int(length*0.8)
-    # idx = np.random.permutation(length)
-    # train_idx, test_idx = sorted(idx[:threshold]), sorted(idx[threshold:])
-
-    train_x = data['problem'][:threshold]
-    train_y = data['answers'][:threshold].reshape(threshold, -1)
-    test_x = data['problem'][threshold:]
-    test_y = data['answers'][threshold:].reshape(length-threshold, -1)
-
-    return train_x, train_y, test_x, test_y
+if __name__ == '__main__':
+    problems = get_problems()
+    print_from_collection(problems, 35)

@@ -7,4 +7,4 @@ L2_CONST = 1e-4
 
 PROBLEM_PATH = '/Users/ohili/PycharmProjects/sgf-solver/data'
 PROBLEM_DATASET = '/Users/ohili/PycharmProjects/sgf-solver/cho_chikun_dataset.h5'
-WEIGHTS_PATH = '/Users/ohili/PycharmProjects/sgf-solver/weights.h5'
+WEIGHTS_PATH = f'weights_{CHANNELS_AMOUNT}x{RESIDUAL_BLOCKS}.h5'

@@ -54,7 +54,6 @@ def create_model():
         loss_weights=[0.5, 0.5],
         metrics=["accuracy"]
     )
+
     model.summary()
     return model
-
-create_model()
