@@ -49,8 +49,8 @@ class ConsoleColor:
     CWHITEBG2 = '\33[107m'
 
 
-def get_problems():
-    return h5py.File(PROBLEM_DATASET, 'r')
+def get_problems(extended=True):
+    return h5py.File(PROBLEM_DATASET.format('big' if extended else 'small'), 'r')
 
 
 def print_problem_and_answer(problem, answers=None):

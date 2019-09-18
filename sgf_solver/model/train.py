@@ -7,14 +7,18 @@ from sgf_solver.constants import PROBLEM_DATASET, WEIGHTS_PATH, INPUT_DATA_SHAPE
 
 
 def load_problems():
-    with h5py.File(PROBLEM_DATASET, 'r') as dataset:
+    with h5py.File(PROBLEM_DATASET.format('big'), 'r') as dataset:
         problems = np.array(dataset['problems'])
         values = np.array(dataset['values'])
         answers = np.array(dataset['answers'])
 
-    problems = problems.reshape((-1, *INPUT_DATA_SHAPE))
-    values = values.reshape((-1, 1))
-    answers = answers.reshape((-1, 361))
+    np.random.seed(0)
+    count = problems.shape[0]
+    indices = np.arange(count)
+    np.random.shuffle(indices)
+    problems = problems.reshape((count, *INPUT_DATA_SHAPE))[indices]
+    values = values.reshape((count, 1))[indices]
+    answers = answers.reshape((count, 361))[indices]
 
     return problems, values, answers
 
@@ -23,17 +27,14 @@ def train_model(problems, values, answers):
     model = create_model()
 
     if os.path.exists(WEIGHTS_PATH):
+        print("Loading weights")
         model.load_weights(WEIGHTS_PATH)
 
-    for i in range(10):
-        model.fit(problems, [values, answers],
-                  batch_size=128,
-                  epochs=50,
-                  shuffle=True)
+    for _ in range(10):
+        model.fit(problems, [values, answers], epochs=10, validation_split=0.2)
         model.save_weights(WEIGHTS_PATH)
 
 
 if __name__ == '__main__':
     problems, values, answers = load_problems()
-
     train_model(problems, values, answers)
