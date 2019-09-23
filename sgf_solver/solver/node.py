@@ -67,3 +67,28 @@ class Node:
 
         self._children[next_idx] = Node(board)
         return self._children[next_idx]
+
+    def perfect_variation(self):
+        moves = []
+        next_node = self
+
+        while True:
+            if next_node.N == 1:
+                break
+
+            idx = int(np.argmax(next_node.visits))
+            moves.append(divmod(idx, 19))
+            next_node = next_node._children[idx]
+
+        return moves
+
+    def show_answer(self):
+        next_node = self
+
+        while True:
+            print(next_node.board)
+            if next_node.N == 1:
+                break
+
+            idx = int(np.argmax(next_node.visits))
+            next_node = next_node._children[idx]

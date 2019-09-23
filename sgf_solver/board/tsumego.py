@@ -61,19 +61,6 @@ class TsumegoBoard(GoBoard):
 
         return stones
 
-    def _get_region(self, loc: Location, coord0: CoordType) -> ChainType:
-        explored = set()
-        unexplored = {coord0}
-
-        while unexplored:
-            coord = unexplored.pop()
-            unexplored |= {coord for p, coord in self._get_surrounding(coord) if p != loc}
-
-            explored.add(coord)
-            unexplored -= explored
-
-        return frozenset(explored)
-
     def _get_regions(self, color: Location):
         unexplored = np.array(self._board != color, dtype=int)
         regions = set()

@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from keras.models import Model
 
 from sgf_solver.board.tsumego import TsumegoBoard
@@ -50,17 +48,27 @@ class TreeSearch:
 
 
 if __name__ == '__main__':
+    import os
     from sgf_solver.model.model import create_model
-    from sgf_solver.constants import ProblemClass
     from utils import get_problems, print_from_collection
-
+    from sgf_solver.constants import WEIGHTS_PATH
     model = create_model()
+
+    if not os.path.exists(WEIGHTS_PATH):
+        print(WEIGHTS_PATH)
+        exit(1)
+
+    model.load_weights(WEIGHTS_PATH)
+
     tree = TreeSearch(model)
 
     probs = get_problems()
-    print_from_collection(probs, 55555)
-    prob = probs['problems'][55555]
-    board = TsumegoBoard(ProblemClass.LIVE, board=prob)
+    print_from_collection(probs, 1234)
+    prob = probs['problems'][1234]
+    board = TsumegoBoard(board=prob[0])
+    print(board.problem)
     node = Node(board)
 
-    tree.rollout(node, 1600)
+    tree.rollout(node, 200)
+
+    node.show_answer()
