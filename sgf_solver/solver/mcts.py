@@ -9,12 +9,12 @@ from sgf_solver.solver.node import Node
 class TreeSearch:
 
     def __init__(self, model: Model):
-        self.children = defaultdict(set)
+        self.children = dict()
         self.model = model
 
     def rollout(self, node: Node, times: int = 1):
         for i in range(times):
-            print('rollout', i)
+            print(f'\rRollout: {i}', end='')
             path = self._select(node)
             parent, leaf = path[-2:]
             reward = self._expand_and_evaluate(parent, leaf)
@@ -23,30 +23,30 @@ class TreeSearch:
     def _select(self, node: Node):
         path = [None, ]
         while True:
-            print('select')
             path.append(node)
 
-            if node not in self.children or node.terminal:
+            if node not in self.children or node.board.solved() is not None:
                 return path
 
             node = node.next_child()
 
     def _expand_and_evaluate(self, parent: Node, leaf: Node):
         """Add root to children nodes and return reward"""
-        print('expand')
-        if leaf not in self.children[node]:
-            leaf.evaluate(self.model)
+        leaf.evaluate(self.model)
 
-            if parent:
-                self.children[parent].add(leaf)
+        if parent:
+            self.children[parent].add(leaf)
+
+        if leaf not in self.children:
+            self.children[leaf] = set()
 
         return leaf.reward()
 
     def _backup(self, path, reward):
         """Send the reward back up to the ancestors of the leaf"""
-        for node in reversed(path):
-            node.add_visit(reward)
-            reward = -reward
+        for node in reversed(path[1:]):
+            node.add_value(reward)
+            reward = 1-reward
 
 
 if __name__ == '__main__':

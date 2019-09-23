@@ -29,7 +29,7 @@ class TsumegoParser:
         if not os.path.exists(self._path):
             raise ParserError(f"File not found: {self._path}")
 
-        with open(filepath) as file:
+        with open(self._path) as file:
             sgf_data = file.read()
 
         return SGFParser(sgf_data).parse()[0]

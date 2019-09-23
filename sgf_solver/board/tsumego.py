@@ -9,18 +9,36 @@ from sgf_solver.enums import Location, ProblemClass
 
 
 class TsumegoBoard(GoBoard):
-    def __init__(self, problem_type: ProblemClass, stones: int = 0, **kwargs):
+    def __init__(self, problem: ProblemClass = None, stones: int = 0, **kwargs):
         super().__init__(**kwargs)
-        self._type = problem_type
+        self._problem = problem
         self._stones = stones
 
     def __hash__(self):
         return hash(str(self._board) + str(self.legal_moves))
 
+    @property
+    def board_data(self):
+        return np.array([self.board * self.turn, self.legal_moves])
+
+    @property
+    def problem(self):
+        if self._problem is None:
+            bx, by = np.where(self.board == Location.BLACK)
+            wx, wy = np.where(self.board == Location.WHITE)
+
+            # calculate average distance from the corner
+            black_dist = 10 - np.average([abs(10 - bx), abs(10 - by)])
+            white_dist = 10 - np.average([abs(10 - wx), abs(10 - wy)])
+
+            self._problem = ProblemClass.LIVE if black_dist < white_dist else ProblemClass.KILL
+
+        return self._problem
+
     def copy(self):
         board, turn, score = self.state
         history = self.history
-        return TsumegoBoard(self._type, board=board, turn=turn, score=score, history=history)
+        return TsumegoBoard(self._problem, board=board, turn=turn, score=score, history=history)
 
     def _get_groups(self, color: Location) -> Set[ChainType]:
         unexplored = np.array(self._board == color, dtype=int)
@@ -38,7 +56,7 @@ class TsumegoBoard(GoBoard):
     def _count_target_stones(self):
         stones = 0
         for group in self._get_groups(
-                Location.WHITE if self._type == ProblemClass.KILL else Location.BLACK):
+                Location.WHITE if self._problem == ProblemClass.KILL else Location.BLACK):
             stones += len(group)
 
         return stones
@@ -120,7 +138,7 @@ class TsumegoBoard(GoBoard):
         return moves
 
     def solved(self) -> Optional[bool]:
-        if self._type == ProblemClass.LIVE:
+        if self.problem == ProblemClass.LIVE:
 
             if self.alive_groups(Location.BLACK)[0]:
                 return True
@@ -131,7 +149,7 @@ class TsumegoBoard(GoBoard):
             if self._score[Location.WHITE] >= self._stones:
                 return False
 
-        if self._type == ProblemClass.KILL:
+        if self.problem == ProblemClass.KILL:
 
             if self.alive_groups(Location.WHITE)[0]:
                 return False

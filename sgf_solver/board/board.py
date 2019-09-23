@@ -27,7 +27,7 @@ class GoBoard:
         self._turn = turn
         self._score = score or {Location.BLACK: 0, Location.WHITE: 0}
         self._history = history.copy() if history else []
-        self._ko = None
+        self._illegal = None
 
     def __repr__(self):
         return f"GoBoard: {len(self._history)} moves, {self.turn_color} to play"
@@ -195,22 +195,22 @@ class GoBoard:
             self._pop_history()
             raise IllegalMoveError("Suicide")
 
-    def _check_super_ko(self):
+    def _check_ko(self):
         """ Verify that super ko rule is not violated """
         for history_board, turn, score in reversed(self._history):
             if np.array_equal(self._board, history_board):
                 self._pop_history()
                 raise IllegalMoveError("Ko")
 
-    def _set_ko_coord(self, captured, coord):
-        self._ko = None
+    def _set_illegal(self, captured, coord):
+        self._illegal = None
         group = self._get_group(coord)
         liberties = self._get_liberties(group)
         if captured == 1 and len(group) == 1 and len(liberties) == 1:
-            self._ko = liberties.pop()
+            self._illegal = liberties.pop()
 
     def move(self, coord: CoordType, super_ko=False):
-        if coord == self._ko:
+        if coord == self._illegal:
             raise IllegalMoveError("Ko")
 
         loc = self._get_loc(coord)
@@ -227,19 +227,17 @@ class GoBoard:
         else:
             self._check_suicide(coord)
 
-        if super_ko:
-            self._check_super_ko()
-
+        self._check_ko()
         self._flip_turn()
 
-        self._set_ko_coord(captured, coord)
+        self._set_illegal(captured, coord)
 
     def make_pass(self):
         self._push_history()
         self._flip_turn()
 
     @property
-    def legal_moves_super_ko(self):
+    def legal_moves(self):
         legal_moves = np.zeros(BOARD_SHAPE, dtype=int)
         for coord in product(range(19), range(19)):
             try:
@@ -251,10 +249,10 @@ class GoBoard:
 
         return legal_moves
 
-    @property
-    def legal_moves(self):
-        legal_moves = np.ones(BOARD_SHAPE, dtype=int)
-        legal_moves[self.board.nonzero()] = 0
-        if self._ko:
-            legal_moves[self._ko] = 0
-        return legal_moves
+    # @property
+    # def legal_moves(self):
+    #     legal_moves = np.ones(BOARD_SHAPE, dtype=int)
+    #     legal_moves[self.board.nonzero()] = 0
+    #     if self._ko:
+    #         legal_moves[self._ko] = 0
+    #     return legal_moves
