@@ -8,9 +8,9 @@ from sgf_solver.constants import PROBLEM_DATASET, WEIGHTS_PATH, INPUT_DATA_SHAPE
 
 def load_problems():
     with h5py.File(PROBLEM_DATASET.format('big'), 'r') as dataset:
-        problems = np.array(dataset['problems'])
-        values = np.array(dataset['values'])
-        answers = np.array(dataset['answers'])
+        problems = np.array(dataset['problems'], dtype=int)
+        values = np.array(dataset['values'], dtype=int)
+        answers = np.array(dataset['answers'], dtype=int)
 
     np.random.seed(0)
     count = problems.shape[0]
@@ -30,9 +30,12 @@ def train_model(problems, values, answers):
         print("Loading weights")
         model.load_weights(WEIGHTS_PATH)
 
-    for _ in range(10):
-        model.fit(problems, [values, answers], epochs=10, validation_split=0.2)
-        model.save_weights(WEIGHTS_PATH)
+    model.fit(problems, [values, answers],
+              epochs=10,
+              steps_per_epoch=1000,
+              validation_steps=100,
+              validation_split=0.2)
+    model.save_weights(WEIGHTS_PATH)
 
 
 if __name__ == '__main__':

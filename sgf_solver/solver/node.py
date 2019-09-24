@@ -37,7 +37,6 @@ class Node:
         action_values[idx] = [n.Q for n in self._children[idx]]
 
         action_values += self._policy / (self.visits+1)
-
         next_idx = int(np.argmax(action_values))
 
         if isinstance(self._children[next_idx], Node):

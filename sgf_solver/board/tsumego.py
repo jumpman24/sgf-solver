@@ -18,10 +18,6 @@ class TsumegoBoard(GoBoard):
         return hash(str(self._board) + str(self.legal_moves))
 
     @property
-    def board_data(self):
-        return np.array([self.board * self.turn, self.legal_moves])
-
-    @property
     def problem(self):
         if self._problem is None:
             bx, by = np.where(self.board == Location.BLACK)
@@ -39,6 +35,31 @@ class TsumegoBoard(GoBoard):
         board, turn, score = self.state
         history = self.history
         return TsumegoBoard(self._problem, board=board, turn=turn, score=score, history=history)
+
+    def _get_region(self, loc: Location, coord0: CoordType) -> ChainType:
+        explored = set()
+        unexplored = {coord0}
+
+        while unexplored:
+            coord = unexplored.pop()
+            unexplored |= {coord for p, coord in self._get_surrounding(coord) if p != loc}
+
+            explored.add(coord)
+            unexplored -= explored
+
+        return frozenset(explored)
+
+    def _get_regions(self, color: Location):
+        unexplored = np.array(self._board != color, dtype=int)
+        regions = set()
+        for coord in product(range(19), range(19)):
+
+            if unexplored[coord]:
+                region = self._get_region(color, coord)
+                regions.add(region)
+                unexplored[tuple(zip(*region))] = 0
+
+        return regions
 
     def _get_groups(self, color: Location) -> Set[ChainType]:
         unexplored = np.array(self._board == color, dtype=int)
@@ -60,18 +81,6 @@ class TsumegoBoard(GoBoard):
             stones += len(group)
 
         return stones
-
-    def _get_regions(self, color: Location):
-        unexplored = np.array(self._board != color, dtype=int)
-        regions = set()
-        for coord in product(range(19), range(19)):
-
-            if unexplored[coord]:
-                region = self._get_region(color, coord)
-                regions.add(region)
-                unexplored[tuple(zip(*region))] = 0
-
-        return regions
 
     def _is_chain_eye(self, loc: Location, group, region):
         surrounding = self._get_chain_surrounding(loc, group)

@@ -55,7 +55,7 @@ if __name__ == '__main__':
     model = create_model()
 
     if not os.path.exists(WEIGHTS_PATH):
-        print(WEIGHTS_PATH)
+        print("No weights found:", WEIGHTS_PATH)
         exit(1)
 
     model.load_weights(WEIGHTS_PATH)
@@ -63,12 +63,12 @@ if __name__ == '__main__':
     tree = TreeSearch(model)
 
     probs = get_problems()
-    print_from_collection(probs, 1234)
-    prob = probs['problems'][1234]
+    print_from_collection(probs, 33333)
+    prob = probs['problems'][33333]
     board = TsumegoBoard(board=prob[0])
     print(board.problem)
     node = Node(board)
 
-    tree.rollout(node, 200)
+    tree.rollout(node, 2000)
 
     node.show_answer()

@@ -27,7 +27,7 @@ class GoBoard:
         self._turn = turn
         self._score = score or {Location.BLACK: 0, Location.WHITE: 0}
         self._history = history.copy() if history else []
-        self._illegal = []
+        self._illegal = set()
 
     def __repr__(self):
         return f"GoBoard: {len(self._history)} moves, {self.turn_color} to play"
@@ -54,6 +54,17 @@ class GoBoard:
     @property
     def history(self):
         return self._history.copy()
+
+    @property
+    def board_data(self):
+        data = np.zeros((9, 19, 19))
+        data[0] = self.board
+        for idx, (board, _, _) in enumerate(reversed(self.history[-7:]), start=1):
+            data[idx] = board
+
+        data *= self.turn
+        data[-1] = self.legal_moves
+        return data
 
     @property
     def turn(self):
@@ -138,7 +149,7 @@ class GoBoard:
         surrounding = set()
 
         for coord in chain:
-            surrounding |= {coord for p, coord in self._get_surrounding(coord) if p is not loc}
+            surrounding |= {coord for p, coord in self._get_surrounding(coord) if p != loc}
 
         return surrounding
 
@@ -158,19 +169,6 @@ class GoBoard:
 
         return self._get_chain(loc, coord)
 
-    def _get_region(self, loc: Location, coord0: CoordType) -> ChainType:
-        explored = set()
-        unexplored = {coord0}
-
-        while unexplored:
-            coord = unexplored.pop()
-            unexplored |= {coord for p, coord in self._get_surrounding(coord) if p != loc}
-
-            explored.add(coord)
-            unexplored -= explored
-
-        return frozenset(explored)
-
     def _get_liberties(self, group: ChainType) -> Set[CoordType]:
         liberties = set()
 
@@ -178,6 +176,22 @@ class GoBoard:
             liberties |= {coord for p, coord in self._get_surrounding(coord) if p is Location.EMPTY}
 
         return liberties
+
+    def _get_one_point_area(self) -> Set[CoordType]:
+        unexplored = np.array(self._board == Location.EMPTY)
+        moves = set()
+
+        for coord in product(range(19), range(19)):
+
+            if unexplored[coord]:
+                area = self._get_area(coord)
+
+                if len(area) == 1:
+                    moves |= area
+
+                unexplored[tuple(zip(*area))] = False
+
+        return moves
 
     def _kill_group(self, group: ChainType) -> int:
         liberties = self._get_liberties(group)
@@ -216,37 +230,24 @@ class GoBoard:
                 self._pop_history()
                 raise IllegalMoveError("Ko")
 
-    def _set_illegal(self, coord0):
-        self._illegal = []
-
-        surroundings = self._get_surrounding(coord0)
-        illegal = []
-        moves_to_try = []
-        for p, coord in surroundings:
-            if p == Location.EMPTY:
-                moves_to_try.append(coord)
-            elif p == self.turn:
-                group = self._get_group(coord)
-                liberties = self._get_liberties(group)
-
-                if len(liberties) == 1:
-                    moves_to_try.append(liberties.pop())
-
-        for coord in moves_to_try:
+    def _set_illegal(self):
+        self._illegal = set()
+        illegal = set()
+        for coord in self._get_one_point_area():
             try:
                 self.move(coord, False)
                 self._pop_history()
             except IllegalMoveError:
-                illegal.append(coord)
+                illegal.add(coord)
 
         self._illegal = illegal
 
-    def move(self, coord: CoordType, check: bool = True):
+    def move(self, coord: CoordType, update_illegal: bool = True):
         if coord in self._illegal:
-            raise IllegalMoveError("Ko")
+            raise IllegalMoveError("Illegal move")
         loc = self._get_loc(coord)
 
-        if loc is not Location.EMPTY:
+        if loc != Location.EMPTY:
             raise IllegalMoveError("Not empty")
 
         self._push_history()
@@ -254,7 +255,6 @@ class GoBoard:
         captured = self._capture(coord)
 
         if captured:
-            print(captured)
             self._add_score(captured)
         else:
             self._check_suicide(coord)
@@ -262,8 +262,8 @@ class GoBoard:
         self._check_ko()
         self._flip_turn()
 
-        if check:
-            self._set_illegal(coord)
+        if update_illegal:
+            self._set_illegal()
 
     def make_pass(self):
         self._push_history()
@@ -272,7 +272,10 @@ class GoBoard:
     @property
     def legal_moves(self):
         legal_moves = np.ones(BOARD_SHAPE, dtype=int)
+
         legal_moves[self.board.nonzero()] = 0
+
         if self._illegal:
             legal_moves[tuple(zip(*self._illegal))] = 0
+
         return legal_moves

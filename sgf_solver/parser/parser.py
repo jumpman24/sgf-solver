@@ -128,8 +128,7 @@ class TsumegoParser:
             answer[coord] = 1
 
             # store problem, value and answers
-            board_position = [board.board * board.turn, board.legal_moves]
-            tree_problems.append(board_position)
+            tree_problems.append(board.board_data)
             tree_answers.append(answer)
             tree_values.append(value)
 
@@ -207,7 +206,7 @@ class TsumegoParser:
 
 
 if __name__ == '__main__':
-    extend = True
+    extend = False
     all_sgf_files = []
     for directory, _, files in os.walk(PROBLEM_PATH):
         for filename in files:
@@ -231,7 +230,7 @@ if __name__ == '__main__':
               f"good: {good_count:-4d}, bad: {bad_count:-4d}", end='')
     print()
     with h5py.File(PROBLEM_DATASET.format('big' if extend else 'small'), 'w') as dataset:
-        dataset.create_dataset('problems', data=np.array(all_problems))
-        dataset.create_dataset('values', data=np.array(all_values))
-        dataset.create_dataset('answers', data=np.array(all_answers))
+        dataset.create_dataset('problems', compression="gzip", data=np.array(all_problems))
+        dataset.create_dataset('values', compression="gzip", data=np.array(all_values))
+        dataset.create_dataset('answers', compression="gzip", data=np.array(all_answers))
         dataset.close()
