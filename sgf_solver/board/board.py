@@ -110,7 +110,7 @@ class GoBoard:
             raise CoordinateError(f"Coordinate {coord} is out of bounds")
         return Location(self._board[coord])
 
-    def _get_surrounding(self, coord0: CoordType) -> LocatedCoordType:
+    def _get_adjacent(self, coord0: CoordType) -> LocatedCoordType:
         """ Get surrounding locations if possible """
         x0, y0 = coord0
         coords = (
@@ -138,18 +138,18 @@ class GoBoard:
 
         while unexplored:
             coord = unexplored.pop()
-            unexplored |= {coord for p, coord in self._get_surrounding(coord) if p == loc}
+            unexplored |= {coord for p, coord in self._get_adjacent(coord) if p == loc}
 
             explored.add(coord)
             unexplored -= explored
 
         return frozenset(explored)
 
-    def _get_chain_surrounding(self, loc: Location, chain: ChainType) -> LocatedSurroundType:
+    def _get_chain_adjacent(self, loc: Location, chain: ChainType) -> LocatedSurroundType:
         surrounding = set()
 
         for coord in chain:
-            surrounding |= {coord for p, coord in self._get_surrounding(coord) if p != loc}
+            surrounding |= {coord for p, coord in self._get_adjacent(coord) if p != loc}
 
         return surrounding
 
@@ -173,7 +173,7 @@ class GoBoard:
         liberties = set()
 
         for coord in group:
-            liberties |= {coord for p, coord in self._get_surrounding(coord) if p is Location.EMPTY}
+            liberties |= {coord for p, coord in self._get_adjacent(coord) if p is Location.EMPTY}
 
         return liberties
 
@@ -206,7 +206,7 @@ class GoBoard:
         """ Remove pieces if needed """
         score = 0
 
-        for p, coord in self._get_surrounding(coord0):
+        for p, coord in self._get_adjacent(coord0):
             if p == self.next_turn:
                 group = self._get_group(coord)
                 score += self._kill_group(group)

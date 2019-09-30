@@ -9,7 +9,7 @@ from sgf_solver.enums import Location, ProblemClass
 
 
 class TsumegoBoard(GoBoard):
-    def __init__(self, problem: ProblemClass = None, stones: int = 0, **kwargs):
+    def __init__(self, problem: ProblemClass = None, stones: np.ndarray = None, **kwargs):
         super().__init__(**kwargs)
         self._problem = problem
         self._stones = stones
@@ -31,10 +31,21 @@ class TsumegoBoard(GoBoard):
 
         return self._problem
 
+    @property
+    def stones(self):
+        if self._stones is None:
+            if self.problem == ProblemClass.LIVE:
+                self._stones = np.array(self._board == Location.BLACK, dtype=int)
+            elif self.problem == ProblemClass.KILL:
+                self._stones = np.array(self._board == Location.WHITE, dtype=int)
+
+        return self._stones
+
     def copy(self):
         board, turn, score = self.state
         history = self.history
-        return TsumegoBoard(self._problem, board=board, turn=turn, score=score, history=history)
+        return TsumegoBoard(self.problem, self.stones,
+                            board=board, turn=turn, score=score, history=history)
 
     def _get_region(self, loc: Location, coord0: CoordType) -> ChainType:
         explored = set()
@@ -42,7 +53,7 @@ class TsumegoBoard(GoBoard):
 
         while unexplored:
             coord = unexplored.pop()
-            unexplored |= {coord for p, coord in self._get_surrounding(coord) if p != loc}
+            unexplored |= {coord for p, coord in self._get_adjacent(coord) if p != loc}
 
             explored.add(coord)
             unexplored -= explored
@@ -83,7 +94,7 @@ class TsumegoBoard(GoBoard):
         return stones
 
     def _is_chain_eye(self, loc: Location, group, region):
-        surrounding = self._get_chain_surrounding(loc, group)
+        surrounding = self._get_chain_adjacent(loc, group)
         return region.issubset(surrounding)
 
     def _chain_eyes(self, loc: Location, group, regions):
@@ -133,16 +144,16 @@ class TsumegoBoard(GoBoard):
 
         return moves
 
+    def stones_are_dead(self):
+        return np.count_nonzero(self._board * self.stones) == 0
+
     def solved(self) -> Optional[bool]:
         if self.problem == ProblemClass.LIVE:
 
             if self.alive_groups(Location.BLACK)[0]:
                 return True
 
-            if not self._stones:
-                self._stones = self._count_target_stones()
-
-            if self._score[Location.WHITE] >= self._stones:
+            if self.stones_are_dead():
                 return False
 
         if self.problem == ProblemClass.KILL:
@@ -153,7 +164,7 @@ class TsumegoBoard(GoBoard):
             if not self._stones:
                 self._stones = self._count_target_stones()
 
-            if self._score[Location.BLACK] >= self._stones:
+            if self.stones_are_dead():
                 return True
 
         return None

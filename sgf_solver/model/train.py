@@ -31,9 +31,8 @@ def train_model(problems, values, answers):
         model.load_weights(WEIGHTS_PATH)
 
     model.fit(problems, [values, answers],
-              epochs=10,
-              steps_per_epoch=1000,
-              validation_steps=100,
+              epochs=1,
+              batch_size=256,
               validation_split=0.2)
     model.save_weights(WEIGHTS_PATH)
 

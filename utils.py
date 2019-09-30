@@ -53,17 +53,17 @@ def get_problems(extended=True):
     return h5py.File(PROBLEM_DATASET.format('big' if extended else 'small'), 'r')
 
 
-def print_problem_and_answer(problem, answers=None):
+def print_problem(problem, answers=None):
     if answers is None:
-        answers = np.zeros(problem.shape)
+        answers = np.zeros((19, 19))
 
     board = ''
 
     for x in range(19):
         for y in range(19):
-            if problem[0, x, y] == 1:
+            if problem[x, y] == 1:
                 board += ConsoleColor.CBLUE + '●'
-            elif problem[0, x, y] == -1:
+            elif problem[x, y] == -1:
                 board += ConsoleColor.CYELLOW + '●'
             elif answers[x, y] == 1:
                 board += ConsoleColor.CRED + ConsoleColor.CBLINK + 'x'
@@ -76,8 +76,8 @@ def print_problem_and_answer(problem, answers=None):
 
 
 def print_from_collection(collection, number):
-    return print_problem_and_answer(collection['problems'][number],
-                                    collection['answers'][number])
+    return print_problem(collection['problems'][number],
+                         collection['answers'][number])
 
 
 if __name__ == '__main__':
